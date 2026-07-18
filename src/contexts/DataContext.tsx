@@ -46,6 +46,9 @@ interface DataContextType {
   sharedConfig: any;
   setSharedConfig: React.Dispatch<React.SetStateAction<any>>;
   updateSharedConfig: (newConfig: any, userRole: string) => Promise<boolean>;
+  recipes: any[];
+  setRecipes: React.Dispatch<React.SetStateAction<any[]>>;
+  saveRecipe: (menuItemId: string, ingredients: any[]) => Promise<boolean>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -149,6 +152,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   });
 
   const [sharedConfig, setSharedConfig] = useState<any>(null);
+  const [recipes, setRecipes] = useState<any[]>(() => {
+    const saved = localStorage.getItem('sync_recipes');
+    return saved ? JSON.parse(saved) : [];
+  });
 
   // Synchronize dashboard_config with the backend via HTTP + SSE
   useEffect(() => {
@@ -312,7 +319,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           activeRes,
           activityRes,
           pastRes,
-          wasteRes
+          wasteRes,
+          recipesRes
         ] = await Promise.all([
           fetch('/api/menu').then(r => r.ok ? r.json() : null),
           fetch('/api/inventory').then(r => r.ok ? r.json() : null),
@@ -320,10 +328,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           fetch('/api/active-orders').then(r => r.ok ? r.json() : null),
           fetch('/api/activity-logs').then(r => r.ok ? r.json() : null),
           fetch('/api/past-orders').then(r => r.ok ? r.json() : null),
-          fetch('/api/waste').then(r => r.ok ? r.json() : null)
+          fetch('/api/waste').then(r => r.ok ? r.json() : null),
+          fetch('/api/recipes').then(r => r.ok ? r.json() : null)
         ]);
 
         if (menuRes && menuRes.length > 0) setMenuItems(menuRes);
+        if (recipesRes && recipesRes.length > 0) setRecipes(recipesRes);
         if (prepRes && prepRes.length > 0) {
           if (JSON.stringify(prepRes) !== JSON.stringify(prevPrepItems.current)) {
             prevPrepItems.current = prepRes;
@@ -532,6 +542,35 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { localStorage.setItem('sync_currentUserEmail', currentUserEmail); }, [currentUserEmail]);
   useEffect(() => { localStorage.setItem('sync_allStudentChoices', JSON.stringify(allStudentChoices)); }, [allStudentChoices]);
   useEffect(() => { localStorage.setItem('sync_mealOptIns', JSON.stringify(mealOptIns)); }, [mealOptIns]);
+  useEffect(() => { localStorage.setItem('sync_recipes', JSON.stringify(recipes)); }, [recipes]);
+
+  const saveRecipe = async (menuItemId: string, ingredients: any[]): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/recipes/batch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ menuItemId, ingredients }),
+      });
+      if (res.ok) {
+        // Reload all recipes from backend to stay in sync
+        const freshRecipes = await fetch('/api/recipes').then(r => r.ok ? r.json() : null);
+        if (freshRecipes) {
+          setRecipes(freshRecipes);
+        }
+        addToast('Recipe saved successfully!', 'success');
+        return true;
+      } else {
+        addToast('Failed to save recipe.', 'error');
+        return false;
+      }
+    } catch (err) {
+      console.error(err);
+      addToast('Network error saving recipe.', 'error');
+      return false;
+    }
+  };
 
   // Sync mealOptIns dynamically whenever allStudentChoices changes
   useEffect(() => {
@@ -570,7 +609,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       currentUserEmail, setCurrentUserEmail,
       allStudentChoices, setAllStudentChoices,
       sharedConfig, setSharedConfig,
-      updateSharedConfig
+      updateSharedConfig,
+      recipes, setRecipes,
+      saveRecipe
     }}>
       {children}
     </DataContext.Provider>

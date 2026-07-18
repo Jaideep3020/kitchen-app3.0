@@ -12,13 +12,16 @@ const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Satur
 type DayType = typeof WEEKDAYS[number];
 
 export default function ManagerMenu() {
-  const { menuItems, setMenuItems } = useData();
+  const { menuItems, setMenuItems, prepItems, recipes, saveRecipe } = useData();
   const { addToast } = useToast();
   
   const [selectedDay, setSelectedDay] = useState<DayType>('Friday');
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newTag, setNewTag] = useState('');
+  
+  // Recipe ingredients editor state
+  const [recipeRows, setRecipeRows] = useState<{ ingredientId: string, qtyPerServing: number, unit: string }[]>([]);
   
   // Custom meal options state for the editing item
   const [mealOptions, setMealOptions] = useState<string[]>([]);
@@ -30,6 +33,14 @@ export default function ManagerMenu() {
   const startEditing = (item: MenuItem) => {
     triggerHaptic('light');
     setEditingItem({ ...item });
+    
+    // Load current recipe rows for this dish from the global recipes state
+    const existingRows = recipes.filter((r: any) => String(r.menuItemId) === String(item.id));
+    setRecipeRows(existingRows.map((r: any) => ({
+      ingredientId: r.ingredientId,
+      qtyPerServing: Number(r.qtyPerServing),
+      unit: r.unit
+    })));
     
     // Parse tags out of item description if we have special format, or check custom tags
     // Let's look for custom choice options which we prefix with "Options: " in description
@@ -125,6 +136,12 @@ export default function ManagerMenu() {
       }
 
       const savedItem = await response.json();
+
+      // Save recipe batch
+      const recipeSuccess = await saveRecipe(updatedItem.id, recipeRows);
+      if (!recipeSuccess) {
+        throw new Error('Failed to save recipe ingredients to database');
+      }
 
       // Update state locally
       setMenuItems(prev => prev.map(item => item.id === savedItem.id ? savedItem : item));
@@ -406,6 +423,96 @@ export default function ManagerMenu() {
                       <Plus className="w-4 h-4" />
                     </button>
                   </div>
+                </div>
+
+                {/* Recipe Ingredients */}
+                <div className="border-t border-gray-50 dark:border-gray-800/50 pt-4 space-y-3">
+                  <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider flex items-center justify-between">
+                    <span>Recipe Ingredients</span>
+                    <span className="text-[9px] font-mono text-gray-500">Per Serving</span>
+                  </label>
+                  
+                  <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1 no-scrollbar">
+                    {recipeRows.length > 0 ? (
+                      recipeRows.map((row, index) => {
+                        const invItem = prepItems.find(p => p.id === row.ingredientId);
+                        return (
+                          <div key={index} className="flex gap-2 items-center">
+                            {/* Select Ingredient */}
+                            <select
+                              value={row.ingredientId}
+                              onChange={e => {
+                                const selectedId = e.target.value;
+                                const selectedInv = prepItems.find(p => p.id === selectedId);
+                                const updated = [...recipeRows];
+                                updated[index] = {
+                                  ...updated[index],
+                                  ingredientId: selectedId,
+                                  unit: selectedInv ? selectedInv.unit : 'kg'
+                                };
+                                setRecipeRows(updated);
+                              }}
+                              className="flex-1 px-2 py-2 bg-gray-50 dark:bg-[#1a1a1a] border border-gray-100 dark:border-gray-800 rounded-lg text-xs font-bold text-gray-900 dark:text-white"
+                            >
+                              <option value="">-- Ingredient --</option>
+                              {prepItems.map(p => (
+                                <option key={p.id} value={p.id}>{p.name}</option>
+                              ))}
+                            </select>
+                            
+                            {/* Qty */}
+                            <div className="w-20 flex items-center bg-gray-50 dark:bg-[#1a1a1a] border border-gray-100 dark:border-gray-800 rounded-lg px-2">
+                              <input
+                                type="number"
+                                step="0.001"
+                                min="0.001"
+                                value={row.qtyPerServing}
+                                onChange={e => {
+                                  const updated = [...recipeRows];
+                                  updated[index].qtyPerServing = parseFloat(e.target.value) || 0;
+                                  setRecipeRows(updated);
+                                }}
+                                className="w-full py-1.5 bg-transparent text-xs font-bold text-gray-900 dark:text-white outline-none"
+                                placeholder="0.0"
+                              />
+                              <span className="text-[9px] text-gray-400 font-bold ml-1">{row.unit}</span>
+                            </div>
+                            
+                            {/* Delete Button */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                triggerHaptic('light');
+                                setRecipeRows(recipeRows.filter((_, i) => i !== index));
+                              }}
+                              className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <p className="text-[10px] text-gray-400 italic">No ingredients configured. Add some below.</p>
+                    )}
+                  </div>
+                  
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      const firstItem = prepItems[0];
+                      setRecipeRows([...recipeRows, {
+                        ingredientId: firstItem ? firstItem.id : '',
+                        qtyPerServing: 0.05,
+                        unit: firstItem ? firstItem.unit : 'kg'
+                      }]);
+                    }}
+                    className="w-full border border-dashed border-gray-200 dark:border-gray-800 hover:border-[#16321F] dark:hover:border-[#D9E96B] text-gray-500 hover:text-[#16321F] dark:hover:text-[#D9E96B] py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Add Ingredient
+                  </button>
                 </div>
 
                 {/* Publish changes */}

@@ -21,31 +21,6 @@ interface StudentOptInProps {
 
 type DayType = 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday';
 
-// Detailed ingredient allocation to display
-const DISH_INGREDIENTS: { [key: string]: string[] } = {
- mon_bf: ['Idli Rice & Urad Dal', 'Toor Dal & Moong Dal', 'Fresh Coconuts', 'Sambar & Rasam Powder'],
- mon_lh: ['Sona Masuri / Raw Rice', 'Toor Dal & Moong Dal', 'Onions & Tomatoes', 'Cabbage & Carrots & Beans'],
- mon_dn: ['Wheat Flour (Atta)', 'Cabbage & Carrots & Beans', 'Sona Masuri / Raw Rice', 'Milk, Curd & Buttermilk'],
- tue_bf: ['Rava (Semolina) & Poha', 'Chana Dal & Peanuts', 'Lemons & Bananas'],
- tue_lh: ['Sona Masuri / Raw Rice', 'Toor Dal & Moong Dal', 'Potatoes', 'Lemons & Bananas'],
- tue_dn: ['Basmati / Jeera Samba Rice', 'Eggs, Chicken, Paneer', 'Milk, Curd & Buttermilk', 'Onions & Tomatoes'],
- wed_bf: ['Idli Rice & Urad Dal', 'Potatoes', 'Onions & Tomatoes', 'Toor Dal & Moong Dal'],
- wed_lh: ['Sona Masuri / Raw Rice', 'Spinach/Palak & Mango/Gongura', 'Bhindi (Okra) & Ivy Gourd', 'Milk, Curd & Buttermilk'],
- wed_dn: ['Wheat Flour (Atta)', 'Soya Chunks (Meal Maker)', 'Sona Masuri / Raw Rice', 'Onions & Tomatoes'],
- thu_bf: ['Sona Masuri / Raw Rice', 'Toor Dal & Moong Dal', 'Idli Rice & Urad Dal', 'Fresh Coconuts'],
- thu_lh: ['Sona Masuri / Raw Rice', 'Toor Dal & Moong Dal', 'Cabbage & Carrots & Beans', 'Pickles & Papad'],
- thu_dn: ['Sona Masuri / Raw Rice', 'Toor Dal & Moong Dal', 'Wheat Flour (Atta)', 'Milk, Curd & Buttermilk'],
- fri_bf: ['Rava (Semolina) & Poha', 'Chana Dal & Peanuts', 'Eggs, Chicken, Paneer', 'Coriander, Mint & Curry Leaves'],
- fri_lh: ['Sona Masuri / Raw Rice', 'Spinach/Palak & Mango/Gongura', 'Bhindi (Okra) & Ivy Gourd', 'Toor Dal & Moong Dal'],
- fri_dn: ['Wheat Flour (Atta)', 'White Chana (Chickpeas)', 'Sona Masuri / Raw Rice', 'Milk, Curd & Buttermilk'],
- sat_bf: ['Wheat Flour (Atta)', 'Potatoes', 'Onions & Tomatoes', 'Cooking Oil & Ghee'],
- sat_lh: ['Sona Masuri / Raw Rice', 'Tamarind & Jaggery', 'Toor Dal & Moong Dal', 'Cabbage & Carrots & Beans'],
- sat_dn: ['Basmati / Jeera Samba Rice', 'Cabbage & Carrots & Beans', 'Cauliflower (Gobi)', 'Soy Sauce & Vinegar'],
- sun_bf: ['Maida & Besan', 'Milk, Curd & Buttermilk', 'Green Chilies, Ginger & Garlic', 'Tamarind & Jaggery'],
- sun_lh: ['Basmati / Jeera Samba Rice', 'Eggs, Chicken, Paneer', 'Onions & Tomatoes', 'Sugar / Vermicelli / Sago'],
- sun_dn: ['Idli Rice & Urad Dal', 'Toor Dal & Moong Dal', 'Fresh Coconuts', 'Sambar & Rasam Powder']
-};
-
 export default function StudentOptIn({ 
  menuItems, 
  onConfirm, 
@@ -54,7 +29,17 @@ export default function StudentOptIn({
  activeDay,
  onActiveDayChange
 }: StudentOptInProps) {
- const { setMealOptIns, sharedConfig } = useData();
+ const { setMealOptIns, sharedConfig, prepItems, recipes } = useData();
+ const getDishIngredients = (dishId: string): string[] => {
+   if (!recipes || !prepItems) return [];
+   return recipes
+     .filter((r: any) => String(r.menuItemId) === String(dishId))
+     .map((r: any) => {
+       const item = prepItems.find((p: any) => String(p.id) === String(r.ingredientId));
+       return item ? item.name : '';
+     })
+     .filter(Boolean);
+ };
  const { addToast } = useToast();
  const [isLoading, setIsLoading] = React.useState(true);
 
@@ -222,7 +207,7 @@ export default function StudentOptIn({
  const selectedDayDishes = filteredDishes.filter(d => studentChoices[d.id]);
  const totalCalories = selectedDayDishes.reduce((sum, d) => sum + d.calories, 0);
  const materialsUtilized = Array.from(
- new Set(selectedDayDishes.flatMap(d => DISH_INGREDIENTS[d.id] || []))
+ new Set(selectedDayDishes.flatMap(d => getDishIngredients(d.id)))
  );
 
  if (isLoading) {
@@ -394,7 +379,7 @@ export default function StudentOptIn({
      <div className="bg-gray-50 rounded-[20px] p-3 border border-gray-100/40 space-y-1.5">
        <span className="text-xs font-medium text-gray-500">Inventory Demand</span>
        <div className="flex flex-wrap gap-1">
-         {(DISH_INGREDIENTS[breakfastDish.id] || []).map(ing => (
+         {getDishIngredients(breakfastDish.id).map(ing => (
            <span key={ing} className="bg-white border border-gray-200/50 rounded-[20px] px-2 py-0.5 text-xs font-medium text-gray-600">
              {ing}
            </span>
@@ -514,7 +499,7 @@ export default function StudentOptIn({
      <div className="bg-gray-50 rounded-[20px] p-3 border border-gray-100/40 space-y-1.5">
        <span className="text-xs font-medium text-gray-500">Inventory Demand</span>
        <div className="flex flex-wrap gap-1">
-         {(DISH_INGREDIENTS[lunchDish.id] || []).map(ing => (
+         {getDishIngredients(lunchDish.id).map(ing => (
            <span key={ing} className="bg-white border border-gray-200/50 rounded-[20px] px-2 py-0.5 text-xs font-medium text-gray-600">
              {ing}
            </span>
@@ -634,7 +619,7 @@ export default function StudentOptIn({
      <div className="bg-gray-50 rounded-[20px] p-3 border border-gray-100/40 space-y-1.5">
        <span className="text-xs font-medium text-gray-500">Inventory Demand</span>
        <div className="flex flex-wrap gap-1">
-         {(DISH_INGREDIENTS[dinnerDish.id] || []).map(ing => (
+         {getDishIngredients(dinnerDish.id).map(ing => (
            <span key={ing} className="bg-white border border-gray-200/50 rounded-[20px] px-2 py-0.5 text-xs font-medium text-gray-600">
              {ing}
            </span>

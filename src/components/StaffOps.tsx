@@ -8,60 +8,6 @@ import { useData } from '../contexts/DataContext';
 import { useToast } from '../contexts/ToastContext';
 import { INITIAL_MENU_ITEMS } from '../data';
 
-const DISH_INGREDIENTS: { [key: string]: string[] } = {
- mon_bf: ['Idli Rice & Urad Dal', 'Toor Dal & Moong Dal', 'Fresh Coconuts', 'Sambar & Rasam Powder'],
- mon_lh: ['Sona Masuri / Raw Rice', 'Toor Dal & Moong Dal', 'Onions & Tomatoes', 'Cabbage & Carrots & Beans'],
- mon_dn: ['Wheat Flour (Atta)', 'Cabbage & Carrots & Beans', 'Sona Masuri / Raw Rice', 'Milk, Curd & Buttermilk'],
- tue_bf: ['Rava (Semolina) & Poha', 'Chana Dal & Peanuts', 'Lemons & Bananas'],
- tue_lh: ['Sona Masuri / Raw Rice', 'Toor Dal & Moong Dal', 'Potatoes', 'Lemons & Bananas'],
- tue_dn: ['Basmati / Jeera Samba Rice', 'Eggs, Chicken, Paneer', 'Milk, Curd & Buttermilk', 'Onions & Tomatoes'],
- wed_bf: ['Idli Rice & Urad Dal', 'Potatoes', 'Onions & Tomatoes', 'Toor Dal & Moong Dal'],
- wed_lh: ['Sona Masuri / Raw Rice', 'Spinach/Palak & Mango/Gongura', 'Bhindi (Okra) & Ivy Gourd', 'Milk, Curd & Buttermilk'],
- wed_dn: ['Wheat Flour (Atta)', 'Soya Chunks (Meal Maker)', 'Sona Masuri / Raw Rice', 'Onions & Tomatoes'],
- thu_bf: ['Sona Masuri / Raw Rice', 'Toor Dal & Moong Dal', 'Idli Rice & Urad Dal', 'Fresh Coconuts'],
- thu_lh: ['Sona Masuri / Raw Rice', 'Toor Dal & Moong Dal', 'Cabbage & Carrots & Beans', 'Pickles & Papad'],
- thu_dn: ['Sona Masuri / Raw Rice', 'Toor Dal & Moong Dal', 'Wheat Flour (Atta)', 'Milk, Curd & Buttermilk'],
- fri_bf: ['Rava (Semolina) & Poha', 'Chana Dal & Peanuts', 'Eggs, Chicken, Paneer', 'Coriander, Mint & Curry Leaves'],
- fri_lh: ['Sona Masuri / Raw Rice', 'Spinach/Palak & Mango/Gongura', 'Bhindi (Okra) & Ivy Gourd', 'Toor Dal & Moong Dal'],
- fri_dn: ['Wheat Flour (Atta)', 'White Chana (Chickpeas)', 'Sona Masuri / Raw Rice', 'Milk, Curd & Buttermilk'],
- sat_bf: ['Wheat Flour (Atta)', 'Potatoes', 'Onions & Tomatoes', 'Cooking Oil & Ghee'],
- sat_lh: ['Sona Masuri / Raw Rice', 'Tamarind & Jaggery', 'Toor Dal & Moong Dal', 'Cabbage & Carrots & Beans'],
- sat_dn: ['Basmati / Jeera Samba Rice', 'Cabbage & Carrots & Beans', 'Cauliflower (Gobi)', 'Soy Sauce & Vinegar'],
- sun_bf: ['Maida & Besan', 'Milk, Curd & Buttermilk', 'Green Chilies, Ginger & Garlic', 'Tamarind & Jaggery'],
- sun_lh: ['Basmati / Jeera Samba Rice', 'Eggs, Chicken, Paneer', 'Onions & Tomatoes', 'Sugar / Vermicelli / Sago'],
- sun_dn: ['Idli Rice & Urad Dal', 'Toor Dal & Moong Dal', 'Fresh Coconuts', 'Sambar & Rasam Powder']
-};
-
-const INGREDIENT_MULTIPLIERS: { [key: string]: number } = {
- 'Idli Rice & Urad Dal': 0.08,
- 'Toor Dal & Moong Dal': 0.05,
- 'Fresh Coconuts': 0.03,
- 'Sambar & Rasam Powder': 0.01,
- 'Sona Masuri / Raw Rice': 0.10,
- 'Onions & Tomatoes': 0.04,
- 'Cabbage & Carrots & Beans': 0.06,
- 'Wheat Flour (Atta)': 0.08,
- 'Milk, Curd & Buttermilk': 0.12,
- 'Rava (Semolina) & Poha': 0.08,
- 'Chana Dal & Peanuts': 0.03,
- 'Lemons & Bananas': 0.15,
- 'Eggs, Chicken, Paneer': 0.15,
- 'Basmati / Jeera Samba Rice': 0.10,
- 'Spinach/Palak & Mango/Gongura': 0.05,
- 'Bhindi (Okra) & Ivy Gourd': 0.08,
- 'Soya Chunks (Meal Maker)': 0.04,
- 'Coriander, Mint & Curry Leaves': 0.01,
- 'White Chana (Chickpeas)': 0.06,
- 'Cooking Oil & Ghee': 0.015,
- 'Tamarind & Jaggery': 0.02,
- 'Cauliflower (Gobi)': 0.08,
- 'Soy Sauce & Vinegar': 0.01,
- 'Maida & Besan': 0.08,
- 'Green Chilies, Ginger & Garlic': 0.015,
- 'Sugar / Vermicelli / Sago': 0.04,
- 'Pickles & Papad': 0.02
-};
-
 interface StaffOpsProps {
  initialSearchQuery?: string;
  prepItems: InventoryItem[];
@@ -89,7 +35,7 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
  onDateChange,
  onDayChange
 }: StaffOpsProps) {
- const { wasteLogs, setWasteLogs, prepProgress, setPrepProgress, mealOptIns, activeOrders } = useData();
+ const { wasteLogs, setWasteLogs, prepProgress, setPrepProgress, mealOptIns, activeOrders, recipes } = useData();
  const { addToast } = useToast();
  // Stateful filter & category options
  const [isSavingPrep, setIsSavingPrep] = useState(false);
@@ -368,7 +314,7 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
  const activePrepDayForWaste = selectedDay || 'Thursday';
  const dishesForDayForWaste = INITIAL_MENU_ITEMS.filter(item => item.dayOfWeek === activePrepDayForWaste);
  const activeIngredientNames = new Set(
- dishesForDayForWaste.flatMap(dish => DISH_INGREDIENTS[dish.id] || [])
+ dishesForDayForWaste.flatMap(dish => recipes.filter((r: any) => String(r.menuItemId) === String(dish.id)).map((r: any) => { const item = prepItems.find((p: any) => String(p.id) === String(r.ingredientId)); return item ? item.name : ''; }).filter(Boolean))
  );
  const activeWasteIngredients = prepItems.filter(item => 
  activeIngredientNames.has(item.name)
@@ -388,13 +334,16 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
       const dishesForDay = INITIAL_MENU_ITEMS.filter(item => item.dayOfWeek === day);
 
       dishesForDay.forEach(dish => {
-          const ingredients = DISH_INGREDIENTS[dish.id] || [];
+          const dishRecipes = recipes.filter((r: any) => String(r.menuItemId) === String(dish.id));
           const portionCount = prepPortions[dish.id] || 200;
-          ingredients.forEach(ingName => {
-              const multiplier = INGREDIENT_MULTIPLIERS[ingName] || 0.05;
-              const demandVal = portionCount * multiplier;
-              deductions[ingName] = (deductions[ingName] || 0) + demandVal;
-          });
+          dishRecipes.forEach(rec => {
+              const item = prepItems.find((p: any) => String(p.id) === String(rec.ingredientId));
+              if (item) {
+                  const qtyPerServing = Number(rec.qtyPerServing) || 0.05;
+                  const demandVal = portionCount * qtyPerServing;
+                  deductions[item.name] = (deductions[item.name] || 0) + demandVal;
+              }
+	});
       });
 
       setPrepItems(prev => prev.map(item => {
@@ -983,7 +932,7 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
  {/* Slider Controls for Portion and Volume adjustment */}
  <div className="bg-white dark:bg-[#121212] p-3.5 rounded-[20px] border border-gray-100 dark:border-gray-800 space-y-4 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
  {(() => {
- const multiplier = (DISH_INGREDIENTS[dish.id] || []).reduce((sum, ingName) => sum + (INGREDIENT_MULTIPLIERS[ingName] || 0.05), 0);
+ const multiplier = recipes.filter((r: any) => String(r.menuItemId) === String(dish.id)).reduce((sum: number, rec: any) => sum + (Number(rec.qtyPerServing) || 0.05), 0);
  const isLbs = prepVolUnit === 'lbs';
  const conversion = isLbs ? 2.20462 : 1;
  
@@ -1102,12 +1051,15 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
  const ingredientDemands: { [key: string]: { amount: number, meals: string[] } } = {};
 
  dishesForDay.forEach(dish => {
- const ingredients = DISH_INGREDIENTS[dish.id] || [];
+ const dishRecipes = recipes.filter((r: any) => String(r.menuItemId) === String(dish.id));
  const portionCount = prepPortions[dish.id] || 200;
 
- ingredients.forEach(ingName => {
- const multiplier = INGREDIENT_MULTIPLIERS[ingName] || 0.05;
- const demandVal = portionCount * multiplier;
+ dishRecipes.forEach(rec => {
+  const item = prepItems.find((p: any) => String(p.id) === String(rec.ingredientId));
+  if (item) {
+  const ingName = item.name;
+ const qtyPerServing = Number(rec.qtyPerServing) || 0.05;
+const demandVal = portionCount * qtyPerServing;
  const mealLabel = dish.mealType.charAt(0).toUpperCase() + dish.mealType.slice(1);
 
  if (ingredientDemands[ingName]) {
@@ -1121,7 +1073,8 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
  meals: [mealLabel]
  };
  }
- });
+ }
+});
  });
 
  const demandRows = Object.keys(ingredientDemands);

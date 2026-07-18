@@ -114,3 +114,12 @@ export const dashboardConfigs = pgTable('dashboard_configs', {
   version: integer('version').notNull().default(1),
 });
 
+export const recipes = pgTable('recipes', {
+  id: serial('id').primaryKey(),
+  menuItemId: text('menu_item_id').notNull(),
+  ingredientId: text('ingredient_id').notNull(),
+  qtyPerServing: decimal('qty_per_serving').notNull(),
+  unit: text('unit').notNull(),
+});
+
+

@@ -17,7 +17,8 @@ import {
   issues, 
   wasteLogs,
   menuItems,
-  dashboardConfigs
+  dashboardConfigs,
+  recipes
 } from "./src/db/schema.ts";
 import { eq, desc, sql } from 'drizzle-orm';
 import { GoogleGenAI } from '@google/genai';
@@ -583,6 +584,58 @@ app.delete('/api/menu/:id', async (req, res) => {
   } catch (err) {
     logEvent('ERROR', `Failed to delete menu item: ${err}`);
     res.status(500).json({ error: 'Failed to delete menu item' });
+  }
+});
+
+// Recipes
+app.get('/api/recipes', async (req, res) => {
+  try {
+    const items = await db.select().from(recipes);
+    res.json(items);
+  } catch (err) {
+    logEvent('ERROR', `Failed to fetch recipes: ${err}`);
+    res.status(500).json({ error: 'Failed to fetch recipes' });
+  }
+});
+
+app.get('/api/recipes/:menuItemId', async (req, res) => {
+  try {
+    const { menuItemId } = req.params;
+    const items = await db.select().from(recipes).where(eq(recipes.menuItemId, menuItemId));
+    res.json(items);
+  } catch (err) {
+    logEvent('ERROR', `Failed to fetch recipe for ${req.params.menuItemId}: ${err}`);
+    res.status(500).json({ error: 'Failed to fetch recipe' });
+  }
+});
+
+app.post('/api/recipes/batch', async (req, res) => {
+  try {
+    const { menuItemId, ingredients } = req.body;
+    if (!menuItemId || !Array.isArray(ingredients)) {
+      return res.status(400).json({ error: 'menuItemId and ingredients array are required' });
+    }
+
+    // Delete existing recipe rows for this menu item
+    await db.delete(recipes).where(eq(recipes.menuItemId, menuItemId));
+
+    // Insert new recipe rows
+    const inserted = [];
+    for (const ing of ingredients) {
+      const result = await db.insert(recipes).values({
+        menuItemId,
+        ingredientId: ing.ingredientId,
+        qtyPerServing: String(ing.qtyPerServing),
+        unit: ing.unit,
+      }).returning();
+      inserted.push(result[0]);
+    }
+
+    logEvent('DATABASE', `Updated recipe in batch for menu item ID ${menuItemId}`);
+    res.json({ success: true, count: inserted.length, data: inserted });
+  } catch (err) {
+    logEvent('ERROR', `Failed to update recipe in batch for ${req.body.menuItemId}: ${err}`);
+    res.status(500).json({ error: 'Failed to update recipe' });
   }
 });
 
