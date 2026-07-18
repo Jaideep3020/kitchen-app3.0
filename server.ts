@@ -22,7 +22,7 @@ import {
   weeklyMenus,
   menuSlots,
   rsvps
-, prepLogs } from "./src/db/schema.ts";
+, prepLogs, staples } from "./src/db/schema.ts";
 import { eq, desc, sql } from 'drizzle-orm';
 import { GoogleGenAI } from '@google/genai';
 import multer from 'multer';
@@ -635,6 +635,22 @@ app.post('/api/weekly-menus/publish', async (req, res) => {
         mealType: d.mealType,
         menuItemId: String(d.id),
       }));
+      
+    // Add staples
+    const allStaples = await db.select().from(staples);
+    const activeStaples = allStaples.filter(s => s.alwaysIncluded);
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    
+    for (const day of days) {
+      for (const staple of activeStaples) {
+        slots.push({
+          weeklyMenuId: menuId,
+          dayOfWeek: day,
+          mealType: staple.mealType,
+          menuItemId: String(staple.menuItemId),
+        });
+      }
+    }
 
     if (slots.length > 0) {
       await db.insert(menuSlots).values(slots);
@@ -645,6 +661,42 @@ app.post('/api/weekly-menus/publish', async (req, res) => {
   } catch (err) {
     logEvent('ERROR', `Failed to publish weekly menu: ${err}`);
     res.status(500).json({ error: 'Failed to publish weekly menu' });
+  }
+});
+
+
+// --- STAPLES ---
+app.get('/api/staples', async (req, res) => {
+  try {
+    const list = await db.select().from(staples);
+    res.json(list);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch staples' });
+  }
+});
+
+app.post('/api/staples', async (req, res) => {
+  try {
+    const { menuItemId, mealType, alwaysIncluded } = req.body;
+    const existing = await db.select().from(staples);
+    const matching = existing.filter(e => String(e.menuItemId) === String(menuItemId) && String(e.mealType) === String(mealType));
+    
+    let result;
+    if (matching.length > 0) {
+      const id = matching[0].id;
+      result = await db.update(staples).set({
+        alwaysIncluded
+      }).where(eq(staples.id, id)).returning();
+    } else {
+      result = await db.insert(staples).values({
+        menuItemId: String(menuItemId),
+        mealType: String(mealType),
+        alwaysIncluded
+      }).returning();
+    }
+    res.json(result[0]);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to save staple' });
   }
 });
 

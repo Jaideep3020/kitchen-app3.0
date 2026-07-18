@@ -108,6 +108,7 @@ const mockStorage: Record<string, any[]> = {
   waste_logs: [],
   past_orders: [],
   prep_logs: [],
+  staples: [],
   dashboard_configs: [
     {
       id: 1,

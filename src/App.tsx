@@ -34,10 +34,11 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import StaffManagement from "./components/StaffManagement";
 import StaffLaunchHub from './components/StaffLaunchHub';
 import ManagerMenu from './components/ManagerMenu';
+import ManagerSettings from './components/ManagerSettings';
 import TimeAndCalendarHub from './components/TimeAndCalendarHub';
 import { triggerHaptic } from './lib/haptics';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
-import { WifiOff } from 'lucide-react';
+import { WifiOff, Settings } from 'lucide-react';
 
 
 export default function App() {
@@ -657,6 +658,7 @@ export default function App() {
      selectedDate={selectedDate}
      onDateChange={setSelectedDate}
      title={role === 'staff' ? (
+       staffTab === 'settings' ? 'Global Settings' :
        staffTab === 'dashboard' ? 'Operations Center' :
        staffTab === 'ops' ? 'Kitchen Ops & Trackers' :
        staffTab === 'stock' ? 'Supplier Reorders' :
@@ -777,6 +779,9 @@ export default function App() {
   )}
   {staffTab === "menu-builder" && (
     <ManagerMenu />
+ )}
+ {staffTab === 'settings' && (
+   <ManagerSettings />
  )}
 
  </ErrorBoundary>

@@ -159,3 +159,12 @@ export const prepLogs = pgTable('prep_logs', {
   loggedBy: text('logged_by').notNull().references(() => users.email),
   loggedAt: timestamp('logged_at').defaultNow()
 });
+
+
+export const staples = pgTable('staples', {
+  id: serial('id').primaryKey(),
+  menuItemId: text('menu_item_id').notNull().references(() => menuItems.id),
+  mealType: text('meal_type').notNull(),
+  alwaysIncluded: boolean('always_included').notNull().default(true),
+});
+
