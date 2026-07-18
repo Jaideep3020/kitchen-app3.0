@@ -9,7 +9,6 @@ import { ChevronUp, ChevronDown, Clock,
  RefreshCw, X, ShieldCheck, ArrowRight, Star, Coins, Delete
 , Check, Camera , BarChart2 } from 'lucide-react';
 import { ActivityLog, ActiveOrder } from '../types';
-import { INITIAL_MENU_ITEMS } from '../data';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { reportIssue } from '../api';
 
@@ -71,6 +70,7 @@ export default function StaffDashboard({
   const [amountInput, setAmountInput] = useState("");
   const [showKeypad, setShowKeypad] = useState<'amount' | 'invoice' | null>(null);
   const { 
+    menuItems,
     wasteLogs, setWasteLogs, 
     prepProgress, prepItems,
     plateWasteThresholds, setPlateWasteThresholds,
@@ -190,8 +190,8 @@ return () => clearTimeout(timer);
   }, [selectedDate]);
 
   const activeShiftDish = useMemo(() => {
-    return INITIAL_MENU_ITEMS.find(item => item.dayOfWeek === day && item.mealType === activeShiftMeal);
-  }, [day, activeShiftMeal]);
+    return menuItems.find(item => item.dayOfWeek === day && item.mealType === activeShiftMeal);
+  }, [day, activeShiftMeal, menuItems]);
 
   const activeShiftOptIns = useMemo(() => {
     if (!activeShiftDish) return 142 + optInCount;
@@ -199,8 +199,8 @@ return () => clearTimeout(timer);
   }, [activeShiftDish, mealOptIns, optInCount]);
 
   const dayMealIds = useMemo(() => {
-    return INITIAL_MENU_ITEMS.filter(item => item.dayOfWeek === day).map(item => item.id);
-  }, [day]);
+    return menuItems.filter(item => item.dayOfWeek === day).map(item => item.id);
+  }, [day, menuItems]);
 
   const studentDayRSVPs = useMemo(() => {
     return dayMealIds.filter(id => studentChoices[id]).length;
@@ -217,7 +217,7 @@ return () => clearTimeout(timer);
 
   const mealsBreakdown = useMemo(() => {
     return (['breakfast', 'lunch', 'dinner'] as const).map(mealType => {
-      const dish = INITIAL_MENU_ITEMS.find(item => item.dayOfWeek === day && item.mealType === mealType);
+      const dish = menuItems.find(item => item.dayOfWeek === day && item.mealType === mealType);
       if (!dish) return null;
       const optIns = mealOptIns[dish.id] || 150;
       const prepped = todayPrep?.portions?.[dish.id] || 0;
@@ -486,7 +486,7 @@ return () => clearTimeout(timer);
     
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       {['breakfast', 'lunch', 'dinner'].map((mealType) => {
-        const dish = INITIAL_MENU_ITEMS.find(item => item.dayOfWeek === day && item.mealType === mealType);
+        const dish = menuItems.find(item => item.dayOfWeek === day && item.mealType === mealType);
         if (!dish) return null;
         
         const count = mealOptIns[dish.id] || 150;
@@ -999,7 +999,7 @@ return () => clearTimeout(timer);
                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 dark:text-gray-300 mb-1">Item</label>
                    <select required name="item" className="w-full bg-gray-50 dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500">
                      <option value="">Select Item</option>
-                     {INITIAL_MENU_ITEMS.filter(m => m.dayOfWeek === (selectedDay || 'Thursday')).map(m => (
+                     {menuItems.filter(m => m.dayOfWeek === (selectedDay || 'Thursday')).map(m => (
                        <option key={m.id} value={m.name}>{m.name}</option>
                      ))}
                    </select>

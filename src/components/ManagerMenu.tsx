@@ -4,7 +4,7 @@ import { useToast } from '../contexts/ToastContext';
 import { triggerHaptic } from '../lib/haptics';
 import { 
   Calendar, Clock, Edit3, Save, Sparkles, Plus, Trash2, 
-  CheckCircle, FileText, Utensils, Zap, HelpCircle 
+  CheckCircle, FileText, Utensils, Zap, HelpCircle, Rocket 
 } from 'lucide-react';
 import { MenuItem } from '../types';
 
@@ -12,12 +12,16 @@ const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Satur
 type DayType = typeof WEEKDAYS[number];
 
 export default function ManagerMenu() {
-  const { menuItems, setMenuItems, prepItems, recipes, saveRecipe } = useData();
+  const { 
+    menuItems, setMenuItems, prepItems, recipes, saveRecipe,
+    activeWeekStartDate, setActiveWeekStartDate, publishWeeklyMenu, weeklyMenus 
+  } = useData();
   const { addToast } = useToast();
   
   const [selectedDay, setSelectedDay] = useState<DayType>('Friday');
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPublishingWeek, setIsPublishingWeek] = useState(false);
   const [newTag, setNewTag] = useState('');
   
   // Recipe ingredients editor state
@@ -168,6 +172,54 @@ export default function ManagerMenu() {
           <p className="text-sm text-gray-500 dark:text-gray-400">
             Design daily meal schedules, configure customizable choice options, and publish directly to the live student app.
           </p>
+        </div>
+      </div>
+
+      {/* Weekly Publish Control Panel */}
+      <div className="bg-white dark:bg-[#121212] p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-xs flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="space-y-1">
+          <h3 className="text-sm font-extrabold text-[#0A170E] dark:text-white flex items-center gap-1.5">
+            <Calendar className="w-4.5 h-4.5 text-[#16321F] dark:text-[#D9E96B]" />
+            Active Weekly Schedule Selector
+          </h3>
+          <p className="text-xs text-gray-400 dark:text-gray-500">
+            Select a week start date (Monday) to manage or publish that week's menu.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Date picker */}
+          <div className="flex items-center bg-gray-50 dark:bg-[#1a1a1a] border border-gray-100 dark:border-gray-800 rounded-xl px-3 py-2">
+            <span className="text-xs font-bold text-gray-500 mr-2 uppercase">Mon:</span>
+            <input
+              type="date"
+              value={activeWeekStartDate}
+              onChange={(e) => {
+                const d = new Date(e.target.value);
+                const day = d.getDay();
+                const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+                const monday = new Date(d.setDate(diff));
+                const mondayStr = monday.toISOString().split('T')[0];
+                setActiveWeekStartDate(mondayStr);
+                triggerHaptic('light');
+              }}
+              className="bg-transparent text-xs font-bold text-gray-900 dark:text-white outline-none"
+            />
+          </div>
+
+          {/* Publish button */}
+          <button
+            onClick={async () => {
+              triggerHaptic('medium');
+              setIsPublishingWeek(true);
+              await publishWeeklyMenu(activeWeekStartDate);
+              setIsPublishingWeek(false);
+            }}
+            disabled={isPublishingWeek}
+            className="bg-[#16321F] dark:bg-[#D9E96B] text-[#D9E96B] dark:text-[#16321F] hover:bg-[#2C4134] dark:hover:bg-[#EAF5E4] px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-sm cursor-pointer disabled:opacity-50"
+          >
+            <Rocket className="w-4 h-4" />
+            {isPublishingWeek ? 'Publishing Week...' : 'Publish Week Schedule'}
+          </button>
         </div>
       </div>
 

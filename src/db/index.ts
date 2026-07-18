@@ -171,7 +171,10 @@ function createMockDrizzle() {
       
       // Thenable interface so it can be awaited
       then: (resolve: any) => {
-        const list = mockStorage[tableName] || [];
+        if (!mockStorage[tableName]) {
+          mockStorage[tableName] = [];
+        }
+        const list = mockStorage[tableName];
         
         if (type === 'select') {
           if (filterCol && filterVal !== undefined) {

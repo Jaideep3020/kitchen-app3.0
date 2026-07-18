@@ -18,7 +18,9 @@ import {
   wasteLogs,
   menuItems,
   dashboardConfigs,
-  recipes
+  recipes,
+  weeklyMenus,
+  menuSlots
 } from "./src/db/schema.ts";
 import { eq, desc, sql } from 'drizzle-orm';
 import { GoogleGenAI } from '@google/genai';
@@ -584,6 +586,64 @@ app.delete('/api/menu/:id', async (req, res) => {
   } catch (err) {
     logEvent('ERROR', `Failed to delete menu item: ${err}`);
     res.status(500).json({ error: 'Failed to delete menu item' });
+  }
+});
+
+// Weekly Menus
+app.get('/api/weekly-menus', async (req, res) => {
+  try {
+    const menus = await db.select().from(weeklyMenus);
+    const slots = await db.select().from(menuSlots);
+    res.json({ menus, slots });
+  } catch (err) {
+    logEvent('ERROR', `Failed to fetch weekly menus: ${err}`);
+    res.status(500).json({ error: 'Failed to fetch weekly menus' });
+  }
+});
+
+app.post('/api/weekly-menus/publish', async (req, res) => {
+  try {
+    const { weekStartDate } = req.body;
+    if (!weekStartDate) {
+      return res.status(400).json({ error: 'weekStartDate is required' });
+    }
+
+    // Upsert the weeklyMenus row
+    const existing = await db.select().from(weeklyMenus).where(eq(weeklyMenus.weekStartDate, weekStartDate));
+    let menuId: number;
+    if (existing.length > 0) {
+      menuId = existing[0].id;
+      await db.update(weeklyMenus).set({ status: 'published' }).where(eq(weeklyMenus.id, menuId));
+      // Clean old slots for this week
+      await db.delete(menuSlots).where(eq(menuSlots.weeklyMenuId, menuId));
+    } else {
+      const inserted = await db.insert(weeklyMenus).values({
+        weekStartDate,
+        status: 'published'
+      }).returning();
+      menuId = inserted[0].id;
+    }
+
+    // Generate menu slots from the current menuItems table
+    const currentDishes = await db.select().from(menuItems);
+    const slots = currentDishes
+      .filter(d => d.dayOfWeek && d.mealType)
+      .map(d => ({
+        weeklyMenuId: menuId,
+        dayOfWeek: d.dayOfWeek!,
+        mealType: d.mealType,
+        menuItemId: String(d.id),
+      }));
+
+    if (slots.length > 0) {
+      await db.insert(menuSlots).values(slots);
+    }
+
+    logEvent('DATABASE', `Published weekly menu ID ${menuId} for week starting ${weekStartDate} with ${slots.length} slots.`);
+    res.json({ success: true, weeklyMenuId: menuId });
+  } catch (err) {
+    logEvent('ERROR', `Failed to publish weekly menu: ${err}`);
+    res.status(500).json({ error: 'Failed to publish weekly menu' });
   }
 });
 

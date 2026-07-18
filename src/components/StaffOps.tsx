@@ -6,7 +6,6 @@ import { triggerHaptic } from '../lib/haptics';
 import { ErrorBoundary } from './ErrorBoundary';
 import { useData } from '../contexts/DataContext';
 import { useToast } from '../contexts/ToastContext';
-import { INITIAL_MENU_ITEMS } from '../data';
 
 interface StaffOpsProps {
  initialSearchQuery?: string;
@@ -35,7 +34,7 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
  onDateChange,
  onDayChange
 }: StaffOpsProps) {
- const { wasteLogs, setWasteLogs, prepProgress, setPrepProgress, mealOptIns, activeOrders, recipes } = useData();
+ const { menuItems, wasteLogs, setWasteLogs, prepProgress, setPrepProgress, mealOptIns, activeOrders, recipes } = useData();
  const { addToast } = useToast();
  // Stateful filter & category options
  const [isSavingPrep, setIsSavingPrep] = useState(false);
@@ -70,11 +69,11 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
  const [selectedIngredientId, setSelectedIngredientId] = useState('');
  React.useEffect(() => {
    const activePrepDayForWaste = selectedDay || 'Thursday';
-   const dishesForDayForWaste = INITIAL_MENU_ITEMS.filter(item => item.dayOfWeek === activePrepDayForWaste);
+   const dishesForDayForWaste = menuItems.filter(item => item.dayOfWeek === activePrepDayForWaste);
    if (dishesForDayForWaste.length > 0 && !dishesForDayForWaste.find(d => d.id === selectedIngredientId)) {
      setSelectedIngredientId(dishesForDayForWaste[0].id);
    }
- }, [selectedDay, selectedIngredientId]);
+ }, [selectedDay, selectedIngredientId, menuItems]);
  const [kitchenWaste, setKitchenWaste] = useState(1.5);
  const [plateWaste, setPlateWaste] = useState(2.0);
 
@@ -203,7 +202,7 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
  const handleLogWasteClick = (e: React.FormEvent) => {
  e.preventDefault();
  const activePrepDayForWaste = selectedDay || 'Thursday';
- const dishesForDayForWaste = INITIAL_MENU_ITEMS.filter(item => item.dayOfWeek === activePrepDayForWaste);
+ const dishesForDayForWaste = menuItems.filter(item => item.dayOfWeek === activePrepDayForWaste);
  const targetItem = dishesForDayForWaste.find(item => item.id === selectedIngredientId);
  if (!targetItem) return;
 
@@ -312,7 +311,7 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
 
  
  const activePrepDayForWaste = selectedDay || 'Thursday';
- const dishesForDayForWaste = INITIAL_MENU_ITEMS.filter(item => item.dayOfWeek === activePrepDayForWaste);
+ const dishesForDayForWaste = menuItems.filter(item => item.dayOfWeek === activePrepDayForWaste);
  const activeIngredientNames = new Set(
  dishesForDayForWaste.flatMap(dish => recipes.filter((r: any) => String(r.menuItemId) === String(dish.id)).map((r: any) => { const item = prepItems.find((p: any) => String(p.id) === String(r.ingredientId)); return item ? item.name : ''; }).filter(Boolean))
  );
@@ -331,7 +330,7 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
       
       // Deduct stock globally
       const deductions: { [key: string]: number } = {};
-      const dishesForDay = INITIAL_MENU_ITEMS.filter(item => item.dayOfWeek === day);
+      const dishesForDay = menuItems.filter(item => item.dayOfWeek === day);
 
       dishesForDay.forEach(dish => {
           const dishRecipes = recipes.filter((r: any) => String(r.menuItemId) === String(dish.id));
@@ -899,7 +898,7 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
  {(() => {
  const activePrepDay = selectedDay || 'Thursday';
  // Get the breakfast, lunch, and dinner menu items for this day
- const dishesForDay = INITIAL_MENU_ITEMS.filter(item => item.dayOfWeek === activePrepDay);
+ const dishesForDay = menuItems.filter(item => item.dayOfWeek === activePrepDay);
 
  return dishesForDay.map(dish => {
  const portionKey = dish.id; // e.g. 'mon_bf'
@@ -1045,7 +1044,7 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
  <tbody className="divide-y divide-gray-50 text-xs font-semibold text-gray-600 dark:text-gray-300">
  {(() => {
  const activePrepDay = selectedDay || 'Thursday';
- const dishesForDay = INITIAL_MENU_ITEMS.filter(item => item.dayOfWeek === activePrepDay);
+ const dishesForDay = menuItems.filter(item => item.dayOfWeek === activePrepDay);
 
  // Gather all ingredients and their cumulative demands
  const ingredientDemands: { [key: string]: { amount: number, meals: string[] } } = {};

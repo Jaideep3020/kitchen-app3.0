@@ -2,7 +2,6 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { MenuItem, InventoryItem, Supplier, ActiveOrder, ActivityLog, PastOrder, WasteLog, PrepProgress, PlateWasteThreshold, ThresholdAlert } from '../types';
 import { useToast } from './ToastContext';
 import { 
-  INITIAL_MENU_ITEMS, 
   INITIAL_PREP_ITEMS, 
   INITIAL_ACTIVE_ORDERS, 
   INITIAL_SUPPLIERS, 
@@ -17,6 +16,15 @@ interface DataContextType {
   setUsers: React.Dispatch<React.SetStateAction<UserAccount[]>>;
   menuItems: MenuItem[];
   setMenuItems: React.Dispatch<React.SetStateAction<MenuItem[]>>;
+  masterMenuItems: MenuItem[];
+  setMasterMenuItems: React.Dispatch<React.SetStateAction<MenuItem[]>>;
+  weeklyMenus: any[];
+  setWeeklyMenus: React.Dispatch<React.SetStateAction<any[]>>;
+  menuSlots: any[];
+  setMenuSlots: React.Dispatch<React.SetStateAction<any[]>>;
+  activeWeekStartDate: string;
+  setActiveWeekStartDate: React.Dispatch<React.SetStateAction<string>>;
+  publishWeeklyMenu: (weekStartDate: string) => Promise<boolean>;
   prepItems: InventoryItem[];
   setPrepItems: React.Dispatch<React.SetStateAction<InventoryItem[]>>;
   suppliers: Supplier[];
@@ -59,10 +67,61 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const saved = localStorage.getItem("sync_users");
     return saved ? JSON.parse(saved) : (DUMMY_USERS as UserAccount[]);
   });
-  const [menuItems, setMenuItems] = useState<MenuItem[]>(() => {
-    const saved = localStorage.getItem('sync_menuItems');
-    return saved ? JSON.parse(saved) : INITIAL_MENU_ITEMS;
+  const [masterMenuItems, setMasterMenuItems] = useState<MenuItem[]>(() => {
+    const saved = localStorage.getItem('sync_masterMenuItems');
+    if (saved) return JSON.parse(saved);
+    const savedOld = localStorage.getItem('sync_menuItems');
+    return savedOld ? JSON.parse(savedOld) : [];
   });
+  const [weeklyMenus, setWeeklyMenus] = useState<any[]>(() => {
+    const saved = localStorage.getItem('sync_weeklyMenus');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [menuSlots, setMenuSlots] = useState<any[]>(() => {
+    const saved = localStorage.getItem('sync_menuSlots');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [activeWeekStartDate, setActiveWeekStartDate] = useState<string>(() => {
+    const saved = localStorage.getItem('sync_activeWeekStartDate');
+    if (saved) return saved;
+    const d = new Date();
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(d.setDate(diff));
+    return monday.toISOString().split('T')[0];
+  });
+
+  const menuItems = React.useMemo(() => {
+    const activeWeeklyMenu = weeklyMenus.find(
+      m => m.weekStartDate === activeWeekStartDate && m.status === 'published'
+    );
+    if (!activeWeeklyMenu) {
+      return masterMenuItems;
+    }
+    const slots = menuSlots.filter(s => s.weeklyMenuId === activeWeeklyMenu.id);
+    if (slots.length === 0) {
+      return masterMenuItems;
+    }
+    return slots.map(slot => {
+      const dish = masterMenuItems.find(m => String(m.id) === String(slot.menuItemId));
+      if (dish) {
+        return {
+          ...dish,
+          dayOfWeek: slot.dayOfWeek,
+          mealType: slot.mealType,
+        };
+      }
+      return null;
+    }).filter(Boolean) as MenuItem[];
+  }, [masterMenuItems, weeklyMenus, menuSlots, activeWeekStartDate]);
+
+  const setMenuItems = React.useCallback((action: React.SetStateAction<MenuItem[]>) => {
+    setMasterMenuItems(prev => {
+      const resolved = typeof action === 'function' ? action(prev) : action;
+      return resolved;
+    });
+  }, []);
+
   const [prepItems, setPrepItems] = useState<InventoryItem[]>(() => {
     const saved = localStorage.getItem('sync_prepItems');
     return saved ? JSON.parse(saved) : INITIAL_PREP_ITEMS;
@@ -93,13 +152,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   });
   const [plateWasteThresholds, setPlateWasteThresholds] = useState<PlateWasteThreshold[]>(() => {
     const saved = localStorage.getItem('sync_plateWasteThresholds');
-    if (saved) return JSON.parse(saved);
-    // Initialize default thresholds (e.g. 4.0 kg as default) for all menu items
-    return INITIAL_MENU_ITEMS.map(item => ({
-      menuItemId: item.id,
-      itemName: item.name,
-      threshold: 4.0,
-    }));
+    return saved ? JSON.parse(saved) : [];
   });
   const [thresholdAlerts, setThresholdAlerts] = useState<ThresholdAlert[]>(() => {
     const saved = localStorage.getItem('sync_thresholdAlerts');
@@ -138,12 +191,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const baselineOptIns = React.useMemo(() => {
     const initial: { [key: string]: number } = {};
-    INITIAL_MENU_ITEMS.forEach(item => {
+    masterMenuItems.forEach(item => {
       const hash = item.id.split('_').reduce((acc, char) => acc + char.charCodeAt(0), 0);
       initial[item.id] = 130 + (hash % 40);
     });
     return initial;
-  }, []);
+  }, [masterMenuItems]);
 
   const [mealOptIns, setMealOptIns] = useState<{ [key: string]: number }>(() => {
     const saved = localStorage.getItem('sync_mealOptIns');
@@ -320,7 +373,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           activityRes,
           pastRes,
           wasteRes,
-          recipesRes
+          recipesRes,
+          weeklyRes
         ] = await Promise.all([
           fetch('/api/menu').then(r => r.ok ? r.json() : null),
           fetch('/api/inventory').then(r => r.ok ? r.json() : null),
@@ -329,10 +383,26 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           fetch('/api/activity-logs').then(r => r.ok ? r.json() : null),
           fetch('/api/past-orders').then(r => r.ok ? r.json() : null),
           fetch('/api/waste').then(r => r.ok ? r.json() : null),
-          fetch('/api/recipes').then(r => r.ok ? r.json() : null)
+          fetch('/api/recipes').then(r => r.ok ? r.json() : null),
+          fetch('/api/weekly-menus').then(r => r.ok ? r.json() : null)
         ]);
 
-        if (menuRes && menuRes.length > 0) setMenuItems(menuRes);
+        if (menuRes && menuRes.length > 0) {
+          setMasterMenuItems(menuRes);
+          // Dynamically populate default thresholds if none exist
+          setPlateWasteThresholds(prev => {
+            if (prev && prev.length > 0) return prev;
+            return menuRes.map((item: any) => ({
+              menuItemId: item.id,
+              itemName: item.name,
+              threshold: 4.0,
+            }));
+          });
+        }
+        if (weeklyRes) {
+          setWeeklyMenus(weeklyRes.menus || []);
+          setMenuSlots(weeklyRes.slots || []);
+        }
         if (recipesRes && recipesRes.length > 0) setRecipes(recipesRes);
         if (prepRes && prepRes.length > 0) {
           if (JSON.stringify(prepRes) !== JSON.stringify(prevPrepItems.current)) {
@@ -529,7 +599,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   // Local Storage Backups for Resilience
   useEffect(() => { localStorage.setItem('sync_users', JSON.stringify(users)); }, [users]);
-  useEffect(() => { localStorage.setItem('sync_menuItems', JSON.stringify(menuItems)); }, [menuItems]);
+  useEffect(() => { localStorage.setItem('sync_masterMenuItems', JSON.stringify(masterMenuItems)); }, [masterMenuItems]);
+  useEffect(() => { localStorage.setItem('sync_weeklyMenus', JSON.stringify(weeklyMenus)); }, [weeklyMenus]);
+  useEffect(() => { localStorage.setItem('sync_menuSlots', JSON.stringify(menuSlots)); }, [menuSlots]);
+  useEffect(() => { localStorage.setItem('sync_activeWeekStartDate', activeWeekStartDate); }, [activeWeekStartDate]);
   useEffect(() => { localStorage.setItem('sync_prepItems', JSON.stringify(prepItems)); }, [prepItems]);
   useEffect(() => { localStorage.setItem('sync_suppliers', JSON.stringify(suppliers)); }, [suppliers]);
   useEffect(() => { localStorage.setItem('sync_activeOrders', JSON.stringify(activeOrders)); }, [activeOrders]);
@@ -543,6 +616,36 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { localStorage.setItem('sync_allStudentChoices', JSON.stringify(allStudentChoices)); }, [allStudentChoices]);
   useEffect(() => { localStorage.setItem('sync_mealOptIns', JSON.stringify(mealOptIns)); }, [mealOptIns]);
   useEffect(() => { localStorage.setItem('sync_recipes', JSON.stringify(recipes)); }, [recipes]);
+
+  const publishWeeklyMenu = async (weekStartDate: string): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/weekly-menus/publish', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ weekStartDate }),
+      });
+      if (res.ok) {
+        // Refresh weekly menus and slots from backend
+        const fresh = await fetch('/api/weekly-menus').then(r => r.ok ? r.json() : null);
+        if (fresh) {
+          setWeeklyMenus(fresh.menus || []);
+          setMenuSlots(fresh.slots || []);
+        }
+        addToast('Weekly menu published successfully!', 'success');
+        return true;
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        addToast(errData.error || 'Failed to publish weekly menu.', 'error');
+        return false;
+      }
+    } catch (err) {
+      console.error(err);
+      addToast('Network error publishing weekly menu.', 'error');
+      return false;
+    }
+  };
 
   const saveRecipe = async (menuItemId: string, ingredients: any[]): Promise<boolean> => {
     try {
@@ -595,6 +698,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     <DataContext.Provider value={{
       users, setUsers,
       menuItems, setMenuItems,
+      masterMenuItems, setMasterMenuItems,
+      weeklyMenus, setWeeklyMenus,
+      menuSlots, setMenuSlots,
+      activeWeekStartDate, setActiveWeekStartDate,
+      publishWeeklyMenu,
       prepItems, setPrepItems,
       suppliers, setSuppliers,
       activeOrders, setActiveOrders,

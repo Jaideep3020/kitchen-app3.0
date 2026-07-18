@@ -122,4 +122,19 @@ export const recipes = pgTable('recipes', {
   unit: text('unit').notNull(),
 });
 
+export const weeklyMenus = pgTable('weekly_menus', {
+  id: serial('id').primaryKey(),
+  weekStartDate: text('week_start_date').notNull(),
+  status: text('status').notNull().default('draft'), // 'draft' | 'published'
+});
+
+export const menuSlots = pgTable('menu_slots', {
+  id: serial('id').primaryKey(),
+  weeklyMenuId: integer('weekly_menu_id').notNull().references(() => weeklyMenus.id),
+  dayOfWeek: text('day_of_week').notNull(),
+  mealType: text('meal_type').notNull(),
+  menuItemId: text('menu_item_id').notNull(), // Reference to menu_items id
+});
+
+
 
