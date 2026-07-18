@@ -116,8 +116,8 @@ export const dashboardConfigs = pgTable('dashboard_configs', {
 
 export const recipes = pgTable('recipes', {
   id: serial('id').primaryKey(),
-  menuItemId: text('menu_item_id').notNull(),
-  ingredientId: text('ingredient_id').notNull(),
+  menuItemId: text('menu_item_id').notNull().references(() => menuItems.id),
+  ingredientId: text('ingredient_id').notNull().references(() => inventoryItems.id),
   qtyPerServing: decimal('qty_per_serving').notNull(),
   unit: text('unit').notNull(),
 });
@@ -133,7 +133,7 @@ export const menuSlots = pgTable('menu_slots', {
   weeklyMenuId: integer('weekly_menu_id').notNull().references(() => weeklyMenus.id),
   dayOfWeek: text('day_of_week').notNull(),
   mealType: text('meal_type').notNull(),
-  menuItemId: text('menu_item_id').notNull(), // Reference to menu_items id
+  menuItemId: text('menu_item_id').notNull().references(() => menuItems.id), // Reference to menu_items id
 });
 
 
