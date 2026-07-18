@@ -1,4 +1,5 @@
-import express from 'express';
+import express from "express";
+import bcrypt from 'bcrypt';
 import path from 'path';
 import cors from 'cors';
 import compression from 'compression';
@@ -68,13 +69,13 @@ function logEvent(module: LogItem['module'], message: string, isError = false) {
 }
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
 const app = express();
+
 app.set('trust proxy', 1); // Trust first proxy
 const PORT = 3000;
 
 app.use(cors());
-app.use(express.json());
+  app.use(express.json());
 app.use(compression());
 
 const apiLimiter = rateLimit({
@@ -1502,6 +1503,78 @@ app.post('/api/deliveries/receive', async (req, res) => {
 });
 
 // Health check
+
+app.post('/api/auth/signup', async (req, res) => {
+  try {
+    const { name, email, password, role } = req.body;
+    if (!email || !password || !role) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    // Check if user exists
+    const existing = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    if (existing.length > 0) {
+      return res.status(400).json({ error: 'Email already exists' });
+    }
+    
+    const passwordHash = await bcrypt.hash(password, 10);
+    const uid = 'usr_' + Date.now().toString() + Math.random().toString(36).substring(2, 7);
+    
+    const result = await db.insert(users).values({
+      uid,
+      name,
+      email,
+      role,
+      passwordHash
+    }).returning();
+    
+    logEvent('AUTH', `Signed up new ${role}: ${email}`);
+    // Omit password hash in response
+    const { passwordHash: _, ...userWithoutPassword } = result[0];
+    res.json(userWithoutPassword);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Missing email or password' });
+    }
+    
+    const userResult = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    if (userResult.length === 0) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    
+    const user = userResult[0];
+    if (!user.passwordHash) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    
+    const match = await bcrypt.compare(password, user.passwordHash);
+    if (!match) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    
+    logEvent('AUTH', `Logged in ${user.role}: ${email}`);
+    const { passwordHash: _, ...userWithoutPassword } = user;
+    res.json({ token: 'mock-jwt-token', user: userWithoutPassword });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+app.get('/api/test-users', async (req, res) => {
+  const all = await db.select().from(users);
+  res.json(all);
+});
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', uptime: process.uptime() });
 });

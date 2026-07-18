@@ -160,7 +160,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   });
 
   const [currentUserEmail, setCurrentUserEmail] = useState<string>(() => {
-    return localStorage.getItem('sync_currentUserEmail') || 'student@kitchenops.edu';
+    return localStorage.getItem('sync_currentUserEmail') || 'student1@mess.edu';
   });
 
   const [allStudentChoices, setAllStudentChoices] = useState<{ [email: string]: { [key: string]: any } }>({});

@@ -4,6 +4,8 @@ import { integer, pgTable, serial, text, timestamp, boolean, decimal, jsonb, ind
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
   uid: text('uid').notNull().unique(),
+  name: text('name'),
+  passwordHash: text('password_hash'),
   email: text('email').notNull(),
   role: text('role').notNull().default('student'),
   createdAt: timestamp('created_at').defaultNow(),

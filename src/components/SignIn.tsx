@@ -21,18 +21,18 @@ export default function SignIn({ onSignIn }: SignInProps) {
   // Auto-fill demo info when role changes
   useEffect(() => {
     if (selectedRole === 'student') {
-      setEmail('student@kitchenops.edu');
-      setPassword('TestPass123!');
+      setEmail('student1@mess.edu');
+      setPassword('Test1234!');
     } else if (selectedRole === 'staff') {
-      setEmail('arjun.verma.stf@gmail.com');
-      setPassword('TestPass123!');
+      setEmail('staff1@mess.edu');
+      setPassword('Test1234!');
     } else if (selectedRole === 'manager') {
-      setEmail('meera.kapoor.mgr@gmail.com');
-      setPassword('TestPass123!');
+      setEmail('manager@mess.edu');
+      setPassword('Test1234!');
     }
   }, [selectedRole]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !password.trim()) {
       setError('Please fill all required fields');
@@ -40,19 +40,32 @@ export default function SignIn({ onSignIn }: SignInProps) {
     }
     setError('');
 
-    // Check users from context
-    const user = users.find(u => u.email === email.trim() && u.password === password.trim());
-    
-    if (user) {
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), password: password.trim() })
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || 'Invalid email or password');
+        return;
+      }
+
+      const data = await res.json();
+      const user = data.user;
+
       if (user.role !== selectedRole) {
         setError(`This account does not have ${selectedRole} access.`);
         return;
       }
+
       onSignIn(user.role as 'student' | 'staff' | 'manager', user.email);
-      return;
+    } catch (err) {
+      console.error(err);
+      setError('An error occurred during sign in');
     }
-    
-    setError('Invalid email or password');
   };
 
   return (

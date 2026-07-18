@@ -97,7 +97,41 @@ const SEED_RECIPES = [
   { menuItemId: 'sun_dn', ingredientId: 'spice_5', qtyPerServing: '0.01', unit: 'kg' }
 ].map((r, i) => ({ id: i + 1, ...r }));
 
+
+const generatedUsers = [
+  { id: 1, uid: "usr_mgr", name: "Main Manager", email: "manager@mess.edu", role: "manager", passwordHash: "$2b$10$diVGZ86I89n89BOeco9k2OLEE4k5RWLe.tJgmiu1ZLf20eDOoVGRG" }
+];
+
+for (let i = 1; i <= 6; i++) {
+  generatedUsers.push({
+    id: generatedUsers.length + 1,
+    uid: "usr_stf" + i,
+    name: "Staff Member " + i,
+    email: "staff" + i + "@mess.edu",
+    role: "staff",
+    passwordHash: "$2b$10$diVGZ86I89n89BOeco9k2OLEE4k5RWLe.tJgmiu1ZLf20eDOoVGRG"
+  });
+}
+
+for (let i = 1; i <= 50; i++) {
+  let name = "Student " + i;
+  let email = "student" + i + "@mess.edu";
+  if (i === 1) name = "Maximilian Bartholomew Alexander Fitzwilliam-Smythe III of House Kensington";
+  if (i === 2) name = "Chloë O'Connor-García";
+  if (i === 3) email = "student-with-an-unnecessarily-long-email-address-that-breaks-ui-layouts-often@subdomain.mess.edu";
+  
+  generatedUsers.push({
+    id: generatedUsers.length + 1,
+    uid: "usr_stu" + i,
+    name,
+    email,
+    role: "student",
+    passwordHash: "$2b$10$diVGZ86I89n89BOeco9k2OLEE4k5RWLe.tJgmiu1ZLf20eDOoVGRG"
+  });
+}
+
 const mockStorage: Record<string, any[]> = {
+  users: generatedUsers,
   inventory_items: [...INITIAL_PREP_ITEMS],
   active_orders: [...INITIAL_ACTIVE_ORDERS],
   activity_logs: [...INITIAL_ACTIVITY_LOGS],
