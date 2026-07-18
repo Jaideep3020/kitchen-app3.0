@@ -161,6 +161,16 @@ export const prepLogs = pgTable('prep_logs', {
 });
 
 
+
+export const mealHeadcounts = pgTable('meal_headcounts', {
+  id: serial('id').primaryKey(),
+  date: date('date').notNull(),
+  mealType: text('meal_type').notNull(),
+  servedCount: integer('served_count').notNull(),
+  loggedBy: text('logged_by').notNull(),
+  loggedAt: timestamp('logged_at').defaultNow()
+});
+
 export const staples = pgTable('staples', {
   id: serial('id').primaryKey(),
   menuItemId: text('menu_item_id').notNull().references(() => menuItems.id),

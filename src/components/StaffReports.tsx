@@ -30,6 +30,24 @@ export default function StaffReports({
 }: StaffReportsProps) {
   const [isLoading, setIsLoading] = React.useState(true);
   const [viewMode, setViewMode] = React.useState<'chart' | 'table'>('chart');
+  
+  const [realForecast, setRealForecast] = useState([]);
+  const [realInsights, setRealInsights] = useState([]);
+  
+  React.useEffect(() => {
+    fetch('/api/demand-prediction')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setRealForecast(data);
+      }).catch(console.error);
+      
+    fetch('/api/recipe-insights')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setRealInsights(data);
+      }).catch(console.error);
+  }, []);
+
   const { spendAndWasteTrendData, yieldWasteData, wasteReasons, sparklineSpend, sparklineWasteCost, sparklineWaste, sparklineAccuracy, currentMonthSpend, currentMonthWasteCost, supplierDeliveryData, consumptionSpikesData, predictiveForecastData, adjustments } = useReportMetrics(optInCount);
 
   const themeColors = {
@@ -463,7 +481,7 @@ export default function StaffReports({
                 </div>
                 <div className="flex-grow min-h-0">
                   <ErrorBoundary fallbackMessage="Failed to load chart"><ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={predictiveForecastData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <ComposedChart data={realForecast.length > 0 ? realForecast : predictiveForecastData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={themeColors.grid} />
                       <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#888' }} dy={10} />
                       <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#888' }} />
@@ -488,7 +506,7 @@ export default function StaffReports({
                     </tr>
                   </thead>
                   <tbody>
-                    {predictiveForecastData.map((row, i) => (
+                    {(realForecast.length > 0 ? realForecast : predictiveForecastData).map((row, i) => (
                       <tr key={i} className="border-b border-gray-100 dark:border-gray-700">
                         <td className="px-4 py-2 font-medium text-gray-900 dark:text-gray-100">{row.day}</td>
                         <td className="px-4 py-2 text-gray-600 dark:text-gray-300">{row.actual || '-'}</td>
