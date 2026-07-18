@@ -269,6 +269,18 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
 ];
 
 export const INITIAL_PREP_ITEMS: InventoryItem[] = [
+  {
+    id: 'unused_veg',
+    name: 'Random Spinach',
+    category: 'Vegetables',
+    unit: 'kg',
+    currentStock: 10,
+    targetStock: 20,
+    reorderLevel: 5,
+    status: 'Healthy',
+    supplierId: 2,
+    expiryDate: '2026-07-20'
+  },
   // --- GRAINS & LENTILS ---
   {
     id: 'grain_1',
@@ -279,7 +291,8 @@ export const INITIAL_PREP_ITEMS: InventoryItem[] = [
     targetStock: 150,
     reorderLevel: 40,
     status: 'In Stock',
-    supplierId: undefined
+    supplierId: undefined,
+    expiryDate: '2026-07-20'
   },
   {
     id: 'grain_2',

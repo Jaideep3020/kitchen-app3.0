@@ -64,6 +64,11 @@ export default function StaffDashboard({
   });
 
   const [showModal, setShowModal] = useState<string | null>(null);
+
+  const [receivingOrder, setReceivingOrder] = useState<ActiveOrder | null>(null);
+  const [checklistStatus, setChecklistStatus] = useState<string | null>(null); // 'full' | 'short' | 'damaged'
+  const [checklistNotes, setChecklistNotes] = useState<string>('');
+
   const [showWasteInsight, setShowWasteInsight] = useState(false);
   const [selectedVendor, setSelectedVendor] = useState("");
   const [invoiceNo, setInvoiceNo] = useState("");

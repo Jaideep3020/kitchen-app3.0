@@ -31,8 +31,10 @@ export default function StaffReports({
   const [isLoading, setIsLoading] = React.useState(true);
   const [viewMode, setViewMode] = React.useState<'chart' | 'table'>('chart');
   
+  
   const [realForecast, setRealForecast] = useState([]);
   const [realInsights, setRealInsights] = useState([]);
+  const [expiryInsights, setExpiryInsights] = useState(null);
   
   React.useEffect(() => {
     fetch('/api/demand-prediction')
@@ -46,7 +48,13 @@ export default function StaffReports({
       .then(data => {
         if (Array.isArray(data)) setRealInsights(data);
       }).catch(console.error);
+      
+    fetch('/api/expiry-insights')
+      .then(res => res.json())
+      .then(data => setExpiryInsights(data))
+      .catch(console.error);
   }, []);
+
 
   const { spendAndWasteTrendData, yieldWasteData, wasteReasons, sparklineSpend, sparklineWasteCost, sparklineWaste, sparklineAccuracy, currentMonthSpend, currentMonthWasteCost, supplierDeliveryData, consumptionSpikesData, predictiveForecastData, adjustments } = useReportMetrics(optInCount);
 

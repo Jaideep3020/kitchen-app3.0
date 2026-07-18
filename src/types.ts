@@ -59,6 +59,7 @@ export interface ActiveOrder {
   supplierId?: string;
   item?: string;
   quantity?: number;
+  receivedQuantity?: number;
   price?: number;
   date?: string;
 }

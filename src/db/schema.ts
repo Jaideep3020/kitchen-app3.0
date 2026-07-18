@@ -32,6 +32,7 @@ export const inventoryItems = pgTable('inventory_items', {
   currentStock: decimal('current_stock').notNull(),
   targetStock: decimal('target_stock').notNull(),
   reorderLevel: decimal('reorder_level').notNull(),
+  expiryDate: date('expiry_date'),
   status: text('status').notNull(),
   supplierId: integer('supplier_id').references(() => suppliers.id),
 }, (table) => ({
@@ -49,6 +50,7 @@ export const activeOrders = pgTable('active_orders', {
   supplierId: text('supplier_id'),
   item: text('item'),
   quantity: integer('quantity'),
+  receivedQuantity: integer('received_quantity'),
   price: real('price'),
   date: text('date'),
 });

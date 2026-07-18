@@ -23,14 +23,28 @@ interface NotificationInboxProps {
   onClose: () => void;
   prepItems: InventoryItem[];
   onNavigateToStock: (draftPO?: { item: string; supplierId: string }) => void;
+  role?: string;
 }
 
-export default function NotificationInbox({ isOpen, onClose, prepItems, onNavigateToStock }: NotificationInboxProps) {
+export default function NotificationInbox({ isOpen, onClose, prepItems, onNavigateToStock, role }: NotificationInboxProps) {
   const [activeCategory, setActiveCategory] = useState<NotificationCategory>('All');
   const { thresholdAlerts, setThresholdAlerts, suppliers } = useData();
 
   const lowStockItems = prepItems.filter(item => item.status === 'Low');
   
+  
+  const studentNotifications: NotificationItem[] = role === 'student' ? [
+    {
+      id: 'rsvp_reminder',
+      category: 'All',
+      title: 'RSVP Reminder',
+      message: 'Do not forget to submit your meal choices for tomorrow by 10:00 PM tonight.',
+      icon: <Bell className="w-5 h-5 text-blue-600 dark:text-blue-400" />,
+      colorClasses: 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500',
+      iconClasses: 'bg-blue-100 dark:bg-blue-900/40'
+    }
+  ] : [];
+
   const inventoryNotifications: NotificationItem[] = lowStockItems.map(item => {
     const matchedSupplier = suppliers?.find(s => 
       s.items?.some(i => i.name.toLowerCase() === item.name.toLowerCase())
@@ -99,7 +113,7 @@ export default function NotificationInbox({ isOpen, onClose, prepItems, onNaviga
     ? allNotifications 
     : allNotifications.filter(n => n.category === activeCategory);
 
-  const categories: NotificationCategory[] = ['All', 'Inventory', 'Waste', 'Orders', 'Maintenance'];
+  const categories: NotificationCategory[] = role === 'student' ? ['All'] : ['All', 'Inventory', 'Waste', 'Orders', 'Maintenance'];
 
   if (!isOpen) return null;
 

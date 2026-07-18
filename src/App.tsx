@@ -428,6 +428,7 @@ export default function App() {
  return (
  <>
   <NotificationInbox 
+        role={role}
         isOpen={showNotifications} 
         onClose={() => setShowNotifications(false)} 
         prepItems={prepItems} 
@@ -602,7 +603,7 @@ export default function App() {
 
  {/* Compact Task Bar (The 3 Buttons) - Top Right */}
  <div className="pointer-events-auto bg-[#16321F] dark:bg-[#1a1a1a] border border-gray-900 dark:border-gray-800 rounded-full p-1 flex items-center gap-1 shadow-md shrink-0">
-   {role === 'staff' && (
+   {role === 'staff' || role === 'student' ? (
      <div className="relative">
        <button 
          type="button"
@@ -611,12 +612,12 @@ export default function App() {
          title="Notifications"
        >
          <Bell className="w-5 h-5" />
-         {lowStockCount > 0 && (
+         {(role === 'staff' && lowStockCount > 0) || (role === 'student') ? (
            <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#16321F] dark:border-[#1a1a1a]"></span>
-         )}
+         ) : null}
        </button>
      </div>
-   )}
+   ) : null}
    <button 
      type="button"
      onClick={() => triggerHaptic('light')}
