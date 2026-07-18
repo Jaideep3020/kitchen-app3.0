@@ -136,5 +136,16 @@ export const menuSlots = pgTable('menu_slots', {
   menuItemId: text('menu_item_id').notNull().references(() => menuItems.id), // Reference to menu_items id
 });
 
+export const rsvps = pgTable('rsvps', {
+  id: serial('id').primaryKey(),
+  studentId: integer('student_id').notNull().references(() => users.id),
+  date: text('date').notNull(),
+  mealType: text('meal_type').notNull(),
+  attending: boolean('attending').notNull().default(false),
+  choice: text('choice'),
+  submittedAt: timestamp('submitted_at').defaultNow(),
+});
+
+
 
 

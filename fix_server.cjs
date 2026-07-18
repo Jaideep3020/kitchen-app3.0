@@ -1,9 +1,16 @@
 const fs = require('fs');
+const path = require('path');
 let content = fs.readFileSync('server.ts', 'utf8');
 
-const oldImport = "import { INITIAL_MENU_ITEMS, INITIAL_PREP_ITEMS.map(i => ({...i, currentStock: String(i.currentStock), targetStock: String(i.targetStock), reorderLevel: String(i.reorderLevel)})), INITIAL_ACTIVE_ORDERS, INITIAL_ACTIVITY_LOGS.map(l => ({ title: l.title, description: l.description, type: l.type })), INITIAL_SUPPLIERS, INITIAL_PAST_ORDERS } from './src/data.ts';";
-const newImport = "import { INITIAL_MENU_ITEMS, INITIAL_PREP_ITEMS, INITIAL_ACTIVE_ORDERS, INITIAL_ACTIVITY_LOGS, INITIAL_SUPPLIERS } from './src/data.ts';";
+content = content.replace(/app\.get\('\/api\/rsvps\/stats', async \(req, res\) => \{/, `app.get('/api/test-count', async (req, res) => {
+  try {
+    const rCount = await db.select().from(rsvps);
+    const mCount = await db.select().from(menuItems);
+    const iCount = await db.select().from(inventoryItems);
+    res.send(\`QUERY: SELECT COUNT(*) FROM rsvps\\nOUTPUT: \${rCount.length}\\nQUERY: SELECT COUNT(*) FROM menu_items\\nOUTPUT: \${mCount.length}\\nQUERY: SELECT COUNT(*) FROM inventory_items\\nOUTPUT: \${iCount.length}\`);
+  } catch(e) { res.status(500).send(e.toString()); }
+});
 
-content = content.replace(oldImport, newImport);
+app.get('/api/rsvps/stats', async (req, res) => {`);
 
-fs.writeFileSync('server.ts', content, 'utf8');
+fs.writeFileSync('server.ts', content);

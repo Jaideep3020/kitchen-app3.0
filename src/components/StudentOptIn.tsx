@@ -129,40 +129,61 @@ export default function StudentOptIn({
  return null;
  };
 
-  const handleToggle = (dishId: string) => {
+      const handleToggle = async (dishId: string) => {
     const isCurrentlyOptedIn = !!studentChoices[dishId];
     const dish = menuItems.find(d => d.id === dishId);
+    if (!dish) return;
 
     // Get default choice if dish has options
-    const options = dish ? getDishOptions(dish) : null;
-    const choiceKey = `${dishId}_choice`;
+    const options = getDishOptions(dish);
+    const choiceValue = options ? options[0] : null;
 
-    // Toggle student choices and immediately save
+    // Optimistic update
     const nextChoices = { ...studentChoices, [dishId]: !isCurrentlyOptedIn };
     if (!isCurrentlyOptedIn && options) {
-      nextChoices[choiceKey] = options[0]; // Auto-initialize to first option
+      nextChoices[`${dishId}_choice`] = options[0];
     }
     setStudentChoices(nextChoices);
     onConfirm(nextChoices);
-
-    // Sync / Update the meal opt-in count dynamically in our global database
+    
     setMealOptIns(prev => ({
       ...prev,
-      [dishId]: Math.max(0, (prev[dishId] || 150) + (isCurrentlyOptedIn ? -1 : 1))
+      [dishId]: Math.max(0, (prev[dishId] || 0) + (isCurrentlyOptedIn ? -1 : 1))
     }));
 
-    triggerHaptic(isCurrentlyOptedIn ? 'light' : 'success');
+    triggerHaptic('success');
+    addToast(isCurrentlyOptedIn ? `Opted out of ${dish.name}` : `Opted into ${dish.name}`, isCurrentlyOptedIn ? 'default' : 'success');
 
-    if (dish) {
-      const dayName = dish.dayOfWeek || selectedDay;
-      const mealName = dish.mealType.charAt(0).toUpperCase() + dish.mealType.slice(1);
-      if (!isCurrentlyOptedIn) {
-        addToast(`Successfully Opted In! Booked ${dish.name} for ${dayName} ${mealName}. 🚀`, 'success');
-      } else {
-        addToast(`Opted Out of ${dish.name} for ${dayName} ${mealName}.`, 'info');
-      }
+    // Calculate actual date based on activeWeekStartDate and dish.dayOfWeek
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const dateObj = new Date(activeWeekStartDate);
+    dateObj.setDate(dateObj.getDate() + Math.max(0, days.indexOf(dish.dayOfWeek || 'Monday')));
+    const dateStr = dateObj.toISOString().split('T')[0];
+
+    try {
+      const res = await fetch('/api/rsvps', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: currentUserEmail,
+          date: dateStr,
+          mealType: dish.mealType,
+          attending: !isCurrentlyOptedIn,
+          choice: choiceValue,
+          dishId: dish.id
+        })
+      });
+      if (!res.ok) throw new Error('Network response was not ok');
+    } catch (err) {
+      console.error(err);
+      addToast('Failed to save RSVP to server', 'error');
+      // Rollback on error
+      setStudentChoices(studentChoices);
+      setMealOptIns(prev => ({
+        ...prev,
+        [dishId]: Math.max(0, (prev[dishId] || 0) + (isCurrentlyOptedIn ? 1 : -1))
+      }));
     }
-    setConfirmed(false);
   };
 
  const handleConfirmClick = () => {
@@ -399,12 +420,33 @@ export default function StudentOptIn({
                <button
                  key={opt}
                  type="button"
-                 onClick={() => {
+                 onClick={async () => {
+                   const isCurrentlyOptedIn = !!studentChoices[breakfastDish.id];
                    const nextChoices = { ...studentChoices, [choiceKey]: opt };
                    setStudentChoices(nextChoices);
                    onConfirm(nextChoices);
                    addToast(`Selected ${opt} for ${breakfastDish.name}! 🍳`, 'success');
                    triggerHaptic('light');
+                   
+                   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+                   const dateObj = new Date(activeWeekStartDate);
+                   dateObj.setDate(dateObj.getDate() + Math.max(0, days.indexOf(breakfastDish.dayOfWeek || 'Monday')));
+                   const dateStr = dateObj.toISOString().split('T')[0];
+
+                   try {
+                     await fetch('/api/rsvps', {
+                       method: 'POST',
+                       headers: { 'Content-Type': 'application/json' },
+                       body: JSON.stringify({
+                         email: currentUserEmail,
+                         date: dateStr,
+                         mealType: breakfastDish.mealType,
+                         attending: isCurrentlyOptedIn,
+                         choice: opt,
+                         dishId: breakfastDish.id
+                       })
+                     });
+                   } catch (e) { console.error(e); }
                  }}
                  className="flex-1 py-1 px-1.5 rounded-lg text-xs font-bold transition-all text-center border cursor-pointer active:scale-95"
                  style={{
@@ -519,12 +561,33 @@ export default function StudentOptIn({
                <button
                  key={opt}
                  type="button"
-                 onClick={() => {
+                 onClick={async () => {
+                   const isCurrentlyOptedIn = !!studentChoices[lunchDish.id];
                    const nextChoices = { ...studentChoices, [choiceKey]: opt };
                    setStudentChoices(nextChoices);
                    onConfirm(nextChoices);
                    addToast(`Selected ${opt} for ${lunchDish.name}! 🍳`, 'success');
                    triggerHaptic('light');
+                   
+                   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+                   const dateObj = new Date(activeWeekStartDate);
+                   dateObj.setDate(dateObj.getDate() + Math.max(0, days.indexOf(lunchDish.dayOfWeek || 'Monday')));
+                   const dateStr = dateObj.toISOString().split('T')[0];
+
+                   try {
+                     await fetch('/api/rsvps', {
+                       method: 'POST',
+                       headers: { 'Content-Type': 'application/json' },
+                       body: JSON.stringify({
+                         email: currentUserEmail,
+                         date: dateStr,
+                         mealType: lunchDish.mealType,
+                         attending: isCurrentlyOptedIn,
+                         choice: opt,
+                         dishId: lunchDish.id
+                       })
+                     });
+                   } catch (e) { console.error(e); }
                  }}
                  className="flex-1 py-1 px-1.5 rounded-lg text-xs font-bold transition-all text-center border cursor-pointer active:scale-95"
                  style={{
@@ -639,12 +702,33 @@ export default function StudentOptIn({
                <button
                  key={opt}
                  type="button"
-                 onClick={() => {
+                 onClick={async () => {
+                   const isCurrentlyOptedIn = !!studentChoices[dinnerDish.id];
                    const nextChoices = { ...studentChoices, [choiceKey]: opt };
                    setStudentChoices(nextChoices);
                    onConfirm(nextChoices);
                    addToast(`Selected ${opt} for ${dinnerDish.name}! 🍳`, 'success');
                    triggerHaptic('light');
+                   
+                   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+                   const dateObj = new Date(activeWeekStartDate);
+                   dateObj.setDate(dateObj.getDate() + Math.max(0, days.indexOf(dinnerDish.dayOfWeek || 'Monday')));
+                   const dateStr = dateObj.toISOString().split('T')[0];
+
+                   try {
+                     await fetch('/api/rsvps', {
+                       method: 'POST',
+                       headers: { 'Content-Type': 'application/json' },
+                       body: JSON.stringify({
+                         email: currentUserEmail,
+                         date: dateStr,
+                         mealType: dinnerDish.mealType,
+                         attending: isCurrentlyOptedIn,
+                         choice: opt,
+                         dishId: dinnerDish.id
+                       })
+                     });
+                   } catch (e) { console.error(e); }
                  }}
                  className="flex-1 py-1 px-1.5 rounded-lg text-xs font-bold transition-all text-center border cursor-pointer active:scale-95"
                  style={{

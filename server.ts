@@ -20,7 +20,8 @@ import {
   dashboardConfigs,
   recipes,
   weeklyMenus,
-  menuSlots
+  menuSlots,
+  rsvps
 } from "./src/db/schema.ts";
 import { eq, desc, sql } from 'drizzle-orm';
 import { GoogleGenAI } from '@google/genai';
@@ -696,6 +697,99 @@ app.post('/api/recipes/batch', async (req, res) => {
   } catch (err) {
     logEvent('ERROR', `Failed to update recipe in batch for ${req.body.menuItemId}: ${err}`);
     res.status(500).json({ error: 'Failed to update recipe' });
+  }
+});
+
+// RSVPs
+app.get('/api/rsvps', async (req, res) => {
+  try {
+    const { date, mealType } = req.query;
+    if (!date || !mealType) {
+      return res.status(400).json({ error: 'date and mealType are required' });
+    }
+    const items = await db.select().from(rsvps).where(sql`${rsvps.date} = ${date as string} AND ${rsvps.mealType} = ${mealType as string}`);
+    res.json(items);
+  } catch (err) {
+    logEvent('ERROR', `Failed to fetch RSVPs: ${err}`);
+    res.status(500).json({ error: 'Failed to fetch RSVPs' });
+  }
+});
+
+app.get('/api/rsvps/student', async (req, res) => {
+  try {
+    const { email } = req.query;
+    if (!email) return res.status(400).json({ error: 'email is required' });
+    const user = await db.select().from(users).where(eq(users.email, email as string)).then(rows => rows[0]);
+    if (!user) return res.json([]);
+    
+    const items = await db.select().from(rsvps).where(eq(rsvps.studentId, user.id));
+    res.json(items);
+  } catch (err) {
+    logEvent('ERROR', `Failed to fetch student RSVPs: ${err}`);
+    res.status(500).json({ error: 'Failed to fetch student RSVPs' });
+  }
+});
+
+app.get('/api/test-count', async (req, res) => {
+  try {
+    const rCount = await db.select().from(rsvps);
+    const mCount = await db.select().from(menuItems);
+    const iCount = await db.select().from(inventoryItems);
+    res.send(`QUERY: SELECT COUNT(*) FROM rsvps\nOUTPUT: ${rCount.length}\nQUERY: SELECT COUNT(*) FROM menu_items\nOUTPUT: ${mCount.length}\nQUERY: SELECT COUNT(*) FROM inventory_items\nOUTPUT: ${iCount.length}`);
+  } catch(e) { res.status(500).send(e.toString()); }
+});
+
+app.get('/api/rsvps/stats', async (req, res) => {
+  try {
+    const items = await db.select().from(rsvps);
+    const stats: any[] = [];
+    // We will just return all items to the frontend and let it group by dishId
+    // Or we can count them here by date and mealType
+    const grouped: Record<string, number> = {};
+    for (const item of items) {
+      if (item.attending) {
+        const key = `${item.date}_${item.mealType}`;
+        grouped[key] = (grouped[key] || 0) + 1;
+      }
+    }
+    res.json(grouped);
+  } catch (err) {
+    logEvent('ERROR', `Failed to fetch RSVP stats: ${err}`);
+    res.status(500).json({ error: 'Failed to fetch RSVP stats' });
+  }
+});
+
+app.post('/api/rsvps', async (req, res) => {
+  try {
+    const { email, date, mealType, attending, choice, dishId } = req.body;
+    if (!email || !date || !mealType) {
+      return res.status(400).json({ error: 'email, date, and mealType are required' });
+    }
+    
+    let user = await db.select().from(users).where(eq(users.email, email)).then(rows => rows[0]);
+    if (!user) {
+      const inserted = await db.insert(users).values({ uid: email, email, role: 'student' }).returning();
+      user = inserted[0];
+    }
+    const studentId = user.id;
+
+    await db.delete(rsvps).where(sql`${rsvps.studentId} = ${studentId} AND ${rsvps.date} = ${date} AND ${rsvps.mealType} = ${mealType}`);
+    
+    if (attending) {
+      const result = await db.insert(rsvps).values({
+        studentId,
+        date,
+        mealType,
+        attending,
+        choice: choice || dishId
+      }).returning();
+      res.json({ success: true, data: result[0] });
+    } else {
+      res.json({ success: true, data: null });
+    }
+  } catch (err) {
+    logEvent('ERROR', `Failed to submit RSVP: ${err}`);
+    res.status(500).json({ error: 'Failed to submit RSVP' });
   }
 });
 
