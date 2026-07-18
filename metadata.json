@@ -1,0 +1,8 @@
+{
+  "name": "Kitchen Ops",
+  "description": "A high-efficiency college mess and kitchen operations management app featuring student meal opt-ins, live mass-balance waste monitoring, supplier ordering, and predictive reporting.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

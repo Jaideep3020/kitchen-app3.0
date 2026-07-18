@@ -1,0 +1,883 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  Calendar, Flame, AlertCircle, CheckCircle2, 
+  ChevronRight, ListCollapse, Utensils, Sparkles, 
+  Scale, Clock, Star, Heart, Check, Trash2, ArrowUpRight,
+  X, Camera, Lock
+} from 'lucide-react';
+import { MenuItem } from '../types';
+import { triggerHaptic } from '../lib/haptics';
+import { useData } from '../contexts/DataContext';
+import { useToast } from '../contexts/ToastContext';
+
+interface StudentOptInProps {
+ menuItems: MenuItem[];
+ onConfirm: (choices: { [key: string]: any }) => void;
+ studentChoices: { [key: string]: any };
+ setStudentChoices: React.Dispatch<React.SetStateAction<{ [key: string]: any }>>;
+ activeDay?: string;
+ onActiveDayChange?: (day: string) => void;
+}
+
+type DayType = 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday';
+
+// Detailed ingredient allocation to display
+const DISH_INGREDIENTS: { [key: string]: string[] } = {
+ mon_bf: ['Idli Rice & Urad Dal', 'Toor Dal & Moong Dal', 'Fresh Coconuts', 'Sambar & Rasam Powder'],
+ mon_lh: ['Sona Masuri / Raw Rice', 'Toor Dal & Moong Dal', 'Onions & Tomatoes', 'Cabbage & Carrots & Beans'],
+ mon_dn: ['Wheat Flour (Atta)', 'Cabbage & Carrots & Beans', 'Sona Masuri / Raw Rice', 'Milk, Curd & Buttermilk'],
+ tue_bf: ['Rava (Semolina) & Poha', 'Chana Dal & Peanuts', 'Lemons & Bananas'],
+ tue_lh: ['Sona Masuri / Raw Rice', 'Toor Dal & Moong Dal', 'Potatoes', 'Lemons & Bananas'],
+ tue_dn: ['Basmati / Jeera Samba Rice', 'Eggs, Chicken, Paneer', 'Milk, Curd & Buttermilk', 'Onions & Tomatoes'],
+ wed_bf: ['Idli Rice & Urad Dal', 'Potatoes', 'Onions & Tomatoes', 'Toor Dal & Moong Dal'],
+ wed_lh: ['Sona Masuri / Raw Rice', 'Spinach/Palak & Mango/Gongura', 'Bhindi (Okra) & Ivy Gourd', 'Milk, Curd & Buttermilk'],
+ wed_dn: ['Wheat Flour (Atta)', 'Soya Chunks (Meal Maker)', 'Sona Masuri / Raw Rice', 'Onions & Tomatoes'],
+ thu_bf: ['Sona Masuri / Raw Rice', 'Toor Dal & Moong Dal', 'Idli Rice & Urad Dal', 'Fresh Coconuts'],
+ thu_lh: ['Sona Masuri / Raw Rice', 'Toor Dal & Moong Dal', 'Cabbage & Carrots & Beans', 'Pickles & Papad'],
+ thu_dn: ['Sona Masuri / Raw Rice', 'Toor Dal & Moong Dal', 'Wheat Flour (Atta)', 'Milk, Curd & Buttermilk'],
+ fri_bf: ['Rava (Semolina) & Poha', 'Chana Dal & Peanuts', 'Eggs, Chicken, Paneer', 'Coriander, Mint & Curry Leaves'],
+ fri_lh: ['Sona Masuri / Raw Rice', 'Spinach/Palak & Mango/Gongura', 'Bhindi (Okra) & Ivy Gourd', 'Toor Dal & Moong Dal'],
+ fri_dn: ['Wheat Flour (Atta)', 'White Chana (Chickpeas)', 'Sona Masuri / Raw Rice', 'Milk, Curd & Buttermilk'],
+ sat_bf: ['Wheat Flour (Atta)', 'Potatoes', 'Onions & Tomatoes', 'Cooking Oil & Ghee'],
+ sat_lh: ['Sona Masuri / Raw Rice', 'Tamarind & Jaggery', 'Toor Dal & Moong Dal', 'Cabbage & Carrots & Beans'],
+ sat_dn: ['Basmati / Jeera Samba Rice', 'Cabbage & Carrots & Beans', 'Cauliflower (Gobi)', 'Soy Sauce & Vinegar'],
+ sun_bf: ['Maida & Besan', 'Milk, Curd & Buttermilk', 'Green Chilies, Ginger & Garlic', 'Tamarind & Jaggery'],
+ sun_lh: ['Basmati / Jeera Samba Rice', 'Eggs, Chicken, Paneer', 'Onions & Tomatoes', 'Sugar / Vermicelli / Sago'],
+ sun_dn: ['Idli Rice & Urad Dal', 'Toor Dal & Moong Dal', 'Fresh Coconuts', 'Sambar & Rasam Powder']
+};
+
+export default function StudentOptIn({ 
+ menuItems, 
+ onConfirm, 
+ studentChoices, 
+ setStudentChoices,
+ activeDay,
+ onActiveDayChange
+}: StudentOptInProps) {
+ const { setMealOptIns, sharedConfig } = useData();
+ const { addToast } = useToast();
+ const [isLoading, setIsLoading] = React.useState(true);
+
+ // States for Student-Facing Quality Complaints
+ const [issueDish, setIssueDish] = useState<MenuItem | null>(null);
+ const [photoBase64, setPhotoBase64] = useState<string>('');
+ const [isSubmittingIssue, setIsSubmittingIssue] = useState(false);
+
+ const DAY_MAP: { [key: string]: number } = {
+ 'Sunday': 0,
+ 'Monday': 1,
+ 'Tuesday': 2,
+ 'Wednesday': 3,
+ 'Thursday': 4,
+ 'Friday': 5,
+ 'Saturday': 6
+ };
+
+ // Simulate skeleton loaders for high-performance feel
+ React.useEffect(() => {
+ const timer = setTimeout(() => {
+ setIsLoading(false);
+ }, 400);
+ return () => clearTimeout(timer);
+ }, []);
+
+ const [localSelectedDay, setLocalSelectedDay] = useState<DayType>('Thursday');
+ const selectedDay = (activeDay as DayType) || localSelectedDay;
+ const setSelectedDay = (day: DayType) => {
+ if (onActiveDayChange) {
+ onActiveDayChange(day);
+ } else {
+ setLocalSelectedDay(day);
+ }
+ };
+
+ const [confirmed, setConfirmed] = useState(false);
+ const [isDayLoading, setIsDayLoading] = useState(false);
+
+ const days: DayType[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+ // RSVP 9 PM cutoff night prior checking
+ const checkIsMealLocked = (targetDay: string): { locked: boolean; reason?: string } => {
+ const now = new Date();
+ const currentDayIndex = now.getDay(); // 0-6
+ const targetDayIndex = DAY_MAP[targetDay];
+ 
+ if (targetDayIndex === undefined) return { locked: false };
+
+ // Normalize indexes to Monday (0) to Sunday (6)
+ const currentDayNorm = currentDayIndex === 0 ? 6 : currentDayIndex - 1;
+ const targetDayNorm = targetDayIndex === 0 ? 6 : targetDayIndex - 1;
+
+ const currentHour = now.getHours();
+
+ if (targetDayNorm < currentDayNorm) {
+   return { locked: true, reason: 'This day is in the past' };
+ } else if (targetDayNorm === currentDayNorm) {
+   // FOR THE PRESENT DAY (TODAY):
+   // Show the optin option for the present day by default (unlocked).
+   // Block the optin option if the cutoff is exempted/enforced.
+   if (sharedConfig?.config?.cutoffExempted) {
+     return { locked: true, reason: 'RSVP closed (cutoff is exempted/enforced today)' };
+   }
+   return { locked: false };
+ } else if (targetDayNorm === currentDayNorm + 1) {
+   if (currentHour >= 21) {
+     return { locked: true, reason: 'Locked: passed 9 PM cutoff night prior' };
+   }
+ }
+ return { locked: false };
+ };
+
+ const lockStatus = checkIsMealLocked(selectedDay);
+
+ // Meal Choice Options Definition
+ const getDishOptions = (dish: MenuItem): string[] | null => {
+ if (dish.id === 'tue_dn' || dish.name.toLowerCase().includes('egg / paneer')) {
+ return ['Boiled Egg', 'Paneer'];
+ }
+ if (dish.id === 'fri_bf' || dish.name.toLowerCase().includes('egg / fruit')) {
+ return ['Boiled Egg', 'Fruit'];
+ }
+ if (dish.id === 'sun_lh' || dish.name.toLowerCase().includes('chicken curry / paneer masala')) {
+ return ['Chicken Curry', 'Paneer Masala'];
+ }
+ return null;
+ };
+
+  const handleToggle = (dishId: string) => {
+    const isCurrentlyOptedIn = !!studentChoices[dishId];
+    const dish = menuItems.find(d => d.id === dishId);
+
+    // Get default choice if dish has options
+    const options = dish ? getDishOptions(dish) : null;
+    const choiceKey = `${dishId}_choice`;
+
+    // Toggle student choices and immediately save
+    const nextChoices = { ...studentChoices, [dishId]: !isCurrentlyOptedIn };
+    if (!isCurrentlyOptedIn && options) {
+      nextChoices[choiceKey] = options[0]; // Auto-initialize to first option
+    }
+    setStudentChoices(nextChoices);
+    onConfirm(nextChoices);
+
+    // Sync / Update the meal opt-in count dynamically in our global database
+    setMealOptIns(prev => ({
+      ...prev,
+      [dishId]: Math.max(0, (prev[dishId] || 150) + (isCurrentlyOptedIn ? -1 : 1))
+    }));
+
+    triggerHaptic(isCurrentlyOptedIn ? 'light' : 'success');
+
+    if (dish) {
+      const dayName = dish.dayOfWeek || selectedDay;
+      const mealName = dish.mealType.charAt(0).toUpperCase() + dish.mealType.slice(1);
+      if (!isCurrentlyOptedIn) {
+        addToast(`Successfully Opted In! Booked ${dish.name} for ${dayName} ${mealName}. 🚀`, 'success');
+      } else {
+        addToast(`Opted Out of ${dish.name} for ${dayName} ${mealName}.`, 'info');
+      }
+    }
+    setConfirmed(false);
+  };
+
+ const handleConfirmClick = () => {
+ triggerHaptic('success');
+ onConfirm(studentChoices);
+ setConfirmed(true);
+ setTimeout(() => {
+ setConfirmed(false);
+ }, 4000);
+ };
+
+ const handleDaySwitch = (day: DayType) => {
+ triggerHaptic('medium');
+ setSelectedDay(day);
+ setIsDayLoading(true);
+ setConfirmed(false);
+ };
+
+ // Automatically trigger transition fade-in whenever the selectedDay is changed from external sources (e.g., Calendar)
+ useEffect(() => {
+ setIsDayLoading(true);
+ setConfirmed(false);
+ }, [selectedDay]);
+
+ useEffect(() => {
+ if (!isDayLoading) return;
+ const timer = setTimeout(() => {
+ setIsDayLoading(false);
+ }, 400);
+ return () => clearTimeout(timer);
+ }, [isDayLoading]);
+
+ // Filter menu items for selected day
+ const filteredDishes = menuItems.filter(dish => dish.dayOfWeek === selectedDay);
+
+ // Group by mealType
+ const breakfastDish = filteredDishes.find(d => d.mealType === 'breakfast');
+ const lunchDish = filteredDishes.find(d => d.mealType === 'lunch');
+ const dinnerDish = filteredDishes.find(d => d.mealType === 'dinner');
+
+ // Calculate footprint of opted-in items for selected day
+ const selectedDayDishes = filteredDishes.filter(d => studentChoices[d.id]);
+ const totalCalories = selectedDayDishes.reduce((sum, d) => sum + d.calories, 0);
+ const materialsUtilized = Array.from(
+ new Set(selectedDayDishes.flatMap(d => DISH_INGREDIENTS[d.id] || []))
+ );
+
+ if (isLoading) {
+ return (
+ <div className="flex-grow max-w-7xl mx-auto w-full px-4 md:px-8 py-6 space-y-6">
+ <div className="flex justify-between items-end pb-4 border-b border-gray-100">
+ <div className="space-y-2">
+ <div className="h-4 w-32 bg-gray-200 rounded-xl animate-skeleton-pulse"></div>
+ <div className="h-8 w-48 bg-gray-300 rounded-[20px] animate-skeleton-pulse"></div>
+ </div>
+ </div>
+ <div className="h-16 bg-gray-100 rounded-[20px] animate-skeleton-pulse mt-6"></div>
+ <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+ {[...Array(3)].map((_, i) => (
+ <div key={i} className="h-56 bg-gray-100 rounded-[24px] animate-skeleton-pulse"></div>
+ ))}
+ </div>
+ </div>
+ );
+ }
+
+ return (
+ <div id="student_opt_in" className="flex-1 max-w-[1200px] mx-auto w-full px-4 pb-24 space-y-6">
+ 
+ {/* Premium Success Modal Banner */}
+ {confirmed && (
+ <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 bg-[#16321F]/95 backdrop-blur-md text-white px-6 py-3.5 rounded-full shadow-2xl flex items-center gap-3 animate-bounce border border-emerald-400/20">
+ <Check className="w-5 h-5 text-emerald-400 bg-white/10 rounded-full p-0.5" />
+ <span className="text-xs font-extrabold ">Your 7-Day booking choices have been locked!</span>
+ </div>
+ )}
+
+ {/* Hero Welcome Banner */}
+ <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pt-2">
+ <div>
+ <span className="text-xs font-bold text-[#16321F] font-mono bg-emerald-50 px-2 py-1 rounded-xl">
+ Wasteless Dining System
+ </span>
+ <h2 className="text-3xl font-extrabold text-[#0A170E] mt-1.5 font-display leading-tight">
+ South Indian Mess Planner
+ </h2>
+ 
+ </div>
+
+ {/* Dynamic footprint glass badge */}
+ {selectedDayDishes.length > 0 && (
+ <div className="bg-[#16321F]/10 border border-[#16321F]/15 rounded-[24px] px-5 py-3 text-right flex items-center gap-3">
+ <div className="w-9 h-9 rounded-full bg-[#16321F] text-[#D9E96B] flex items-center justify-center">
+ <Sparkles className="w-4 h-4 fill-current" />
+ </div>
+ <div>
+ <span className="text-xs font-medium text-[#16321F] block font-mono">
+ Daily Allotment Footprint
+ </span>
+ <span className="text-xs font-bold text-gray-800">
+ {selectedDayDishes.length} Selected • {totalCalories} Calories
+ </span>
+ </div>
+ </div>
+ )}
+ </div>
+
+ {/* 7-Day Smooth Horizon Slider */}
+ <div className="bg-white/80 backdrop-blur-md p-2 rounded-[24px] border border-gray-100 flex overflow-x-auto gap-2 no-scrollbar">
+ {days.map((day) => {
+ const isActive = selectedDay === day;
+ const dayDishIds = menuItems.filter(d => d.dayOfWeek === day).map(d => d.id);
+ const activeCountOnDay = dayDishIds.filter(id => studentChoices[id]).length;
+
+ return (
+ <button
+ key={day}
+ type="button"
+ onClick={() => handleDaySwitch(day)}
+ className={`w-16 h-16 rounded-full font-bold transition-all flex flex-col items-center justify-center shrink-0 ${
+                isActive
+                  ? 'bg-[#16321F] text-white shadow-sm scale-105'
+                  : 'bg-transparent text-gray-500 hover:bg-gray-100'
+              }`}
+ >
+ <span className="font-display text-xs">{day.substring(0, 3)}</span>
+ <span className="text-xs font-bold opacity-50">{day.substring(3)}</span>
+ {activeCountOnDay > 0 ? (
+ <span className={`text-xs font-bold mt-1.5 px-1.5 py-0.5 rounded-xl ${
+ isActive ? 'bg-white/20 text-white' : 'bg-emerald-50 text-[#16321F] border border-emerald-100'
+ }`}>
+ {activeCountOnDay} {activeCountOnDay === 1 ? 'Meal' : 'Meals'}
+ </span>
+ ) : (
+ <span className="text-xs font-medium text-gray-400 mt-1.5">No meal</span>
+ )}
+ </button>
+ );
+ })}
+ </div>
+
+ {/* Staples Alert Strip */}
+ <div className="bg-gradient-to-r from-emerald-50/60 to-teal-50/60 rounded-[24px] border border-emerald-100/60 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs">
+ <div className="flex items-start gap-2.5">
+ <Utensils className="w-4 h-4 text-[#16321F] shrink-0 mt-0.5" />
+ <div>
+ <span className="font-extrabold text-[#0A170E] block">Unlimited Access Staples Included</span>
+ <p className="text-gray-500 font-semibold mt-0.5">
+ White rice, spiced sambar, local pickles, and papads are permanently stocked and served on-demand.
+ </p>
+ </div>
+ </div>
+ <span className="bg-[#16321F]/10 text-[#16321F] font-bold px-3 py-1 rounded-[20px] text-xs w-fit font-mono shrink-0">
+ STAPLES ASSURED
+ </span>
+ </div>
+
+ {/* Cutoff / Locked Info Banner */}
+ {lockStatus.locked && (
+ <div className="bg-amber-50 border border-amber-200/80 rounded-[24px] p-4 flex items-center gap-3 text-amber-800 text-xs font-semibold animate-fadeIn mb-2">
+ <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
+ <div>
+ <span className="font-extrabold block">Booking Locked for {selectedDay}</span>
+ <p className="text-amber-700 font-medium mt-0.5">
+ {lockStatus.reason || 'RSVP for this day is closed because the 9 PM prior night cutoff has passed.'}
+ </p>
+ </div>
+ </div>
+ )}
+
+ {/* Main Grid: Card layout or skeleton loader */}
+ {isDayLoading ? (
+ <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+ {[1, 2, 3].map((idx) => (
+ <div key={idx} className="bg-white rounded-[24px] p-5 border border-gray-100 space-y-4 animate-skeleton-pulse">
+ <div className="h-40 w-full bg-gray-200 rounded-[20px]"></div>
+ <div className="h-6 w-2/3 bg-gray-200 rounded-[20px]"></div>
+ <div className="h-4 w-full bg-gray-100 rounded-[20px]"></div>
+ <div className="h-10 w-full bg-gray-200 rounded-[20px]"></div>
+ </div>
+ ))}
+ </div>
+ ) : (
+ <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+ 
+ {/* Breakfast Card */}
+ {breakfastDish && (
+ <div
+   className={`bg-white rounded-[24px] shadow-xs border flex flex-col overflow-hidden transition-all duration-300 relative group hover:shadow-sm ${
+     studentChoices[breakfastDish.id] ? 'border-[#16321F] ring-1 ring-[#16321F]/10' : 'border-gray-100'
+   }`}
+ >
+   <div className="h-44 w-full relative overflow-hidden">
+     <img 
+       src={breakfastDish.image} 
+       alt={breakfastDish.name} 
+       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+       referrerPolicy="no-referrer"
+     />
+     <div className="absolute top-3 left-3 bg-white/95 text-[#0A170E] px-3 py-1 rounded-full text-xs font-medium shadow-2xs backdrop-blur-md font-mono">
+       Breakfast • Morning
+     </div>
+   </div>
+
+   <div className="p-5 flex-grow flex flex-col justify-between space-y-4">
+     <div className="space-y-1.5">
+       <h3 className="text-lg font-extrabold text-[#0A170E] leading-snug font-display line-clamp-1">
+         {breakfastDish.name}
+       </h3>
+       <p className="text-xs text-gray-500 leading-relaxed font-semibold line-clamp-2">{breakfastDish.description}</p>
+     </div>
+
+     {/* Allocated raw material list */}
+     <div className="bg-gray-50 rounded-[20px] p-3 border border-gray-100/40 space-y-1.5">
+       <span className="text-xs font-medium text-gray-500">Inventory Demand</span>
+       <div className="flex flex-wrap gap-1">
+         {(DISH_INGREDIENTS[breakfastDish.id] || []).map(ing => (
+           <span key={ing} className="bg-white border border-gray-200/50 rounded-[20px] px-2 py-0.5 text-xs font-medium text-gray-600">
+             {ing}
+           </span>
+         ))}
+       </div>
+     </div>
+
+     {getDishOptions(breakfastDish) && studentChoices[breakfastDish.id] && (
+       <div className="mt-1 p-2 bg-gray-50 border border-gray-100 rounded-xl space-y-1 animate-tab-transition">
+         <span className="text-[10px] font-bold text-gray-400 uppercase font-mono block">Choose Option</span>
+         <div className="flex gap-1.5">
+           {getDishOptions(breakfastDish)!.map(opt => {
+             const choiceKey = `${breakfastDish.id}_choice`;
+             const selectedOption = studentChoices[choiceKey] || getDishOptions(breakfastDish)![0];
+             const isSelected = selectedOption === opt;
+             return (
+               <button
+                 key={opt}
+                 type="button"
+                 onClick={() => {
+                   const nextChoices = { ...studentChoices, [choiceKey]: opt };
+                   setStudentChoices(nextChoices);
+                   onConfirm(nextChoices);
+                   addToast(`Selected ${opt} for ${breakfastDish.name}! 🍳`, 'success');
+                   triggerHaptic('light');
+                 }}
+                 className="flex-1 py-1 px-1.5 rounded-lg text-xs font-bold transition-all text-center border cursor-pointer active:scale-95"
+                 style={{
+                   backgroundColor: isSelected ? '#16321F' : '#ffffff',
+                   color: isSelected ? '#ffffff' : '#4b5563',
+                   borderColor: isSelected ? '#16321F' : '#e5e7eb'
+                 }}
+               >
+                 {opt === 'Boiled Egg' ? '🥚 Egg' : opt === 'Paneer' ? '🧀 Paneer' : opt === 'Fruit' ? '🍎 Fruit' : opt}
+               </button>
+             );
+           })}
+         </div>
+       </div>
+     )}
+
+     <div className="pt-3 border-t border-gray-100/60 flex items-center justify-between">
+       <div className="flex flex-col">
+         <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 px-2.5 py-1 rounded-xl text-xs font-medium font-mono">
+           <Flame className="w-3 h-3 text-[#16321F]" />
+           {breakfastDish.calories} kcal
+         </span>
+         <button
+           type="button"
+           onClick={() => {
+             setIssueDish(breakfastDish);
+             setPhotoBase64('');
+           }}
+           className="mt-2 text-[11px] font-extrabold text-amber-600 hover:text-amber-700 flex items-center gap-1 cursor-pointer w-fit transition-colors"
+         >
+           <AlertCircle className="w-3.5 h-3.5" />
+           Report Quality
+         </button>
+       </div>
+
+       <button
+         disabled={lockStatus.locked}
+         onClick={() => handleToggle(breakfastDish.id)}
+         className={`px-4 h-10 rounded-[20px] text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ${
+           lockStatus.locked
+             ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
+             : studentChoices[breakfastDish.id]
+             ? 'bg-[#D9E96B] text-[#16321F]'
+             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+         }`}
+       >
+         {lockStatus.locked ? (
+           <>
+             <Lock className="w-3.5 h-3.5 text-gray-400" />
+             Locked
+           </>
+         ) : (
+           <>
+             <CheckCircle2 className={`w-4 h-4 ${studentChoices[breakfastDish.id] ? 'text-emerald-400 fill-[#16321F]' : 'text-current'}`} />
+             {studentChoices[breakfastDish.id] ? 'Booked' : 'Opt In'}
+           </>
+         )}
+       </button>
+     </div>
+   </div>
+ </div>
+ )}
+
+ {/* Lunch Card */}
+ {lunchDish && (
+ <div
+   className={`bg-white rounded-[24px] shadow-xs border flex flex-col overflow-hidden transition-all duration-300 relative group hover:shadow-sm ${
+     studentChoices[lunchDish.id] ? 'border-[#16321F] ring-1 ring-[#16321F]/10' : 'border-gray-100'
+   }`}
+ >
+   <div className="h-44 w-full relative overflow-hidden">
+     <img 
+       src={lunchDish.image} 
+       alt={lunchDish.name} 
+       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+       referrerPolicy="no-referrer"
+     />
+     <div className="absolute top-3 left-3 bg-white/95 text-[#0A170E] px-3 py-1 rounded-full text-xs font-medium shadow-2xs backdrop-blur-md font-mono">
+       Lunch • Afternoon
+     </div>
+   </div>
+
+   <div className="p-5 flex-grow flex flex-col justify-between space-y-4">
+     <div className="space-y-1.5">
+       <h3 className="text-lg font-extrabold text-[#0A170E] leading-snug font-display line-clamp-1">
+         {lunchDish.name}
+       </h3>
+       <p className="text-xs text-gray-500 leading-relaxed font-semibold line-clamp-2">{lunchDish.description}</p>
+     </div>
+
+     {/* Allocated raw material list */}
+     <div className="bg-gray-50 rounded-[20px] p-3 border border-gray-100/40 space-y-1.5">
+       <span className="text-xs font-medium text-gray-500">Inventory Demand</span>
+       <div className="flex flex-wrap gap-1">
+         {(DISH_INGREDIENTS[lunchDish.id] || []).map(ing => (
+           <span key={ing} className="bg-white border border-gray-200/50 rounded-[20px] px-2 py-0.5 text-xs font-medium text-gray-600">
+             {ing}
+           </span>
+         ))}
+       </div>
+     </div>
+
+     {getDishOptions(lunchDish) && studentChoices[lunchDish.id] && (
+       <div className="mt-1 p-2 bg-gray-50 border border-gray-100 rounded-xl space-y-1 animate-tab-transition">
+         <span className="text-[10px] font-bold text-gray-400 uppercase font-mono block">Choose Option</span>
+         <div className="flex gap-1.5">
+           {getDishOptions(lunchDish)!.map(opt => {
+             const choiceKey = `${lunchDish.id}_choice`;
+             const selectedOption = studentChoices[choiceKey] || getDishOptions(lunchDish)![0];
+             const isSelected = selectedOption === opt;
+             return (
+               <button
+                 key={opt}
+                 type="button"
+                 onClick={() => {
+                   const nextChoices = { ...studentChoices, [choiceKey]: opt };
+                   setStudentChoices(nextChoices);
+                   onConfirm(nextChoices);
+                   addToast(`Selected ${opt} for ${lunchDish.name}! 🍳`, 'success');
+                   triggerHaptic('light');
+                 }}
+                 className="flex-1 py-1 px-1.5 rounded-lg text-xs font-bold transition-all text-center border cursor-pointer active:scale-95"
+                 style={{
+                   backgroundColor: isSelected ? '#16321F' : '#ffffff',
+                   color: isSelected ? '#ffffff' : '#4b5563',
+                   borderColor: isSelected ? '#16321F' : '#e5e7eb'
+                 }}
+               >
+                 {opt === 'Chicken Curry' ? '🍗 Chicken' : opt === 'Paneer Masala' ? '🧀 Paneer' : opt}
+               </button>
+             );
+           })}
+         </div>
+       </div>
+     )}
+
+     <div className="pt-3 border-t border-gray-100/60 flex items-center justify-between">
+       <div className="flex flex-col">
+         <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 px-2.5 py-1 rounded-xl text-xs font-medium font-mono">
+           <Flame className="w-3 h-3 text-[#16321F]" />
+           {lunchDish.calories} kcal
+         </span>
+         <button
+           type="button"
+           onClick={() => {
+             setIssueDish(lunchDish);
+             setPhotoBase64('');
+           }}
+           className="mt-2 text-[11px] font-extrabold text-amber-600 hover:text-amber-700 flex items-center gap-1 cursor-pointer w-fit transition-colors"
+         >
+           <AlertCircle className="w-3.5 h-3.5" />
+           Report Quality
+         </button>
+       </div>
+
+       <button
+         disabled={lockStatus.locked}
+         onClick={() => handleToggle(lunchDish.id)}
+         className={`px-4 h-10 rounded-[20px] text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ${
+           lockStatus.locked
+             ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
+             : studentChoices[lunchDish.id]
+             ? 'bg-[#D9E96B] text-[#16321F]'
+             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+         }`}
+       >
+         {lockStatus.locked ? (
+           <>
+             <Lock className="w-3.5 h-3.5 text-gray-400" />
+             Locked
+           </>
+         ) : (
+           <>
+             <CheckCircle2 className={`w-4 h-4 ${studentChoices[lunchDish.id] ? 'text-emerald-400 fill-[#16321F]' : 'text-current'}`} />
+             {studentChoices[lunchDish.id] ? 'Booked' : 'Opt In'}
+           </>
+         )}
+       </button>
+     </div>
+   </div>
+ </div>
+ )}
+
+ {/* Dinner Card */}
+ {dinnerDish && (
+ <div
+   className={`bg-white rounded-[24px] shadow-xs border flex flex-col overflow-hidden transition-all duration-300 relative group hover:shadow-sm ${
+     studentChoices[dinnerDish.id] ? 'border-[#16321F] ring-1 ring-[#16321F]/10' : 'border-gray-100'
+   }`}
+ >
+   <div className="h-44 w-full relative overflow-hidden">
+     <img 
+       src={dinnerDish.image} 
+       alt={dinnerDish.name} 
+       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+       referrerPolicy="no-referrer"
+     />
+     <div className="absolute top-3 left-3 bg-white/95 text-[#0A170E] px-3 py-1 rounded-full text-xs font-medium shadow-2xs backdrop-blur-md font-mono">
+       Dinner • Evening
+     </div>
+   </div>
+
+   <div className="p-5 flex-grow flex flex-col justify-between space-y-4">
+     <div className="space-y-1.5">
+       <h3 className="text-lg font-extrabold text-[#0A170E] leading-snug font-display line-clamp-1">
+         {dinnerDish.name}
+       </h3>
+       <p className="text-xs text-gray-500 leading-relaxed font-semibold line-clamp-2">{dinnerDish.description}</p>
+     </div>
+
+     {/* Allocated raw material list */}
+     <div className="bg-gray-50 rounded-[20px] p-3 border border-gray-100/40 space-y-1.5">
+       <span className="text-xs font-medium text-gray-500">Inventory Demand</span>
+       <div className="flex flex-wrap gap-1">
+         {(DISH_INGREDIENTS[dinnerDish.id] || []).map(ing => (
+           <span key={ing} className="bg-white border border-gray-200/50 rounded-[20px] px-2 py-0.5 text-xs font-medium text-gray-600">
+             {ing}
+           </span>
+         ))}
+       </div>
+     </div>
+
+     {getDishOptions(dinnerDish) && studentChoices[dinnerDish.id] && (
+       <div className="mt-1 p-2 bg-gray-50 border border-gray-100 rounded-xl space-y-1.5 animate-tab-transition">
+         <span className="text-[10px] font-bold text-gray-400 uppercase font-mono block">Choose Option</span>
+         <div className="flex gap-1.5">
+           {getDishOptions(dinnerDish)!.map(opt => {
+             const choiceKey = `${dinnerDish.id}_choice`;
+             const selectedOption = studentChoices[choiceKey] || getDishOptions(dinnerDish)![0];
+             const isSelected = selectedOption === opt;
+             return (
+               <button
+                 key={opt}
+                 type="button"
+                 onClick={() => {
+                   const nextChoices = { ...studentChoices, [choiceKey]: opt };
+                   setStudentChoices(nextChoices);
+                   onConfirm(nextChoices);
+                   addToast(`Selected ${opt} for ${dinnerDish.name}! 🍳`, 'success');
+                   triggerHaptic('light');
+                 }}
+                 className="flex-1 py-1 px-1.5 rounded-lg text-xs font-bold transition-all text-center border cursor-pointer active:scale-95"
+                 style={{
+                   backgroundColor: isSelected ? '#16321F' : '#ffffff',
+                   color: isSelected ? '#ffffff' : '#4b5563',
+                   borderColor: isSelected ? '#16321F' : '#e5e7eb'
+                 }}
+               >
+                 {opt === 'Boiled Egg' ? '🥚 Egg' : opt === 'Paneer' ? '🧀 Paneer' : opt}
+               </button>
+             );
+           })}
+         </div>
+       </div>
+     )}
+
+     <div className="pt-3 border-t border-gray-100/60 flex items-center justify-between">
+       <div className="flex flex-col">
+         <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 px-2.5 py-1 rounded-xl text-xs font-medium font-mono">
+           <Flame className="w-3 h-3 text-[#16321F]" />
+           {dinnerDish.calories} kcal
+         </span>
+         <button
+           type="button"
+           onClick={() => {
+             setIssueDish(dinnerDish);
+             setPhotoBase64('');
+           }}
+           className="mt-2 text-[11px] font-extrabold text-amber-600 hover:text-amber-700 flex items-center gap-1 cursor-pointer w-fit transition-colors"
+         >
+           <AlertCircle className="w-3.5 h-3.5" />
+           Report Quality
+         </button>
+       </div>
+
+       <button
+         disabled={lockStatus.locked}
+         onClick={() => handleToggle(dinnerDish.id)}
+         className={`px-4 h-10 rounded-[20px] text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ${
+           lockStatus.locked
+             ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
+             : studentChoices[dinnerDish.id]
+             ? 'bg-[#D9E96B] text-[#16321F]'
+             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+         }`}
+       >
+         {lockStatus.locked ? (
+           <>
+             <Lock className="w-3.5 h-3.5 text-gray-400" />
+             Locked
+           </>
+         ) : (
+           <>
+             <CheckCircle2 className={`w-4 h-4 ${studentChoices[dinnerDish.id] ? 'text-emerald-400 fill-[#16321F]' : 'text-current'}`} />
+             {studentChoices[dinnerDish.id] ? 'Booked' : 'Opt In'}
+           </>
+         )}
+       </button>
+     </div>
+   </div>
+ </div>
+ )}
+
+ </div>
+ )}
+
+ {/* Ingredient Footprint breakdown */}
+ {selectedDayDishes.length > 0 && (
+ <div className="bg-white rounded-[24px] p-6 border border-gray-100 shadow-xs space-y-4 animate-tab-transition">
+ <div className="flex items-center gap-2.5">
+ <Scale className="w-5 h-5 text-[#16321F]" />
+ <div>
+ <h3 className="text-base font-bold text-[#0A170E] font-display">Your Ingredient Contribution</h3>
+ </div>
+ </div>
+
+ <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+ {materialsUtilized.map((mat, idx) => (
+ <div key={idx} className="bg-gray-50 rounded-[20px] p-3 border border-gray-100/30 text-center">
+ <span className="text-xs font-medium text-gray-500 block mb-1 font-mono">Target weight</span>
+ <span className="text-xs font-bold text-gray-800 block truncate" title={mat}>{mat}</span>
+ <span className="text-xs font-bold text-[#16321F] bg-emerald-50 border border-emerald-100/50 rounded-[20px] px-2 py-0.5 inline-block mt-2">
+ {mat.includes('Rice') || mat.includes('Wheat') ? '150g Draft' : mat.includes('Dal') ? '50g Draft' : 'Portion standard'}
+ </span>
+ </div>
+ ))}
+ </div>
+ </div>
+ )}
+
+  {/* Quality Complaint Modal */}
+  {issueDish && (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
+      <div className="bg-white dark:bg-[#121212] rounded-[24px] w-full max-w-md p-6 shadow-2xl relative my-8 border border-gray-100 animate-scaleUp text-left">
+        <button 
+          onClick={() => setIssueDish(null)} 
+          className="absolute top-4 right-4 p-2 bg-gray-100 dark:bg-[#222] rounded-full hover:bg-gray-200 dark:hover:bg-[#333] transition-colors cursor-pointer"
+        >
+          <X className="w-4 h-4 text-gray-500" />
+        </button>
+        <h3 className="text-lg font-bold mb-1 flex items-center gap-2 text-amber-600">
+          <AlertCircle className="w-5 h-5" />
+          Food Quality Complaint
+        </h3>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+          Submit quality feedback or complaints directly to the mess managers for <strong className="text-gray-800 dark:text-gray-200">{issueDish.name}</strong>.
+        </p>
+        
+        <form onSubmit={async (e) => {
+          e.preventDefault();
+          setIsSubmittingIssue(true);
+          try {
+            const formData = new FormData(e.currentTarget);
+            const category = formData.get('category') as string;
+            const description = formData.get('description') as string;
+            
+            const payload = {
+              type: 'Food Quality',
+              itemName: issueDish.name,
+              category: category,
+              description: description,
+              photoBase64: photoBase64 || null,
+              status: 'Open'
+            };
+
+            const res = await fetch('/api/issues', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+              addToast(`Complaint submitted successfully! Management will inspect the quality of ${issueDish.name}.`, 'success');
+              setIssueDish(null);
+              setPhotoBase64('');
+            } else {
+              addToast('Failed to submit quality report.', 'error');
+            }
+          } catch (err) {
+            console.error(err);
+            addToast('Error submitting feedback.', 'error');
+          } finally {
+            setIsSubmittingIssue(false);
+          }
+        }} className="space-y-4 text-left">
+          <div>
+            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Feedback Category</label>
+            <select name="category" className="w-full bg-gray-50 dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500">
+              <option value="Taste / Quality">Taste / Cooking Quality</option>
+              <option value="Under-cooked / Raw">Under-cooked / Raw</option>
+              <option value="Cold Temperature">Cold Temperature / Stale</option>
+              <option value="Hygiene Concern">Hygiene Concern</option>
+              <option value="Foreign Object">Foreign Object Found</option>
+              <option value="Other">Other Feedback</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Details & Description</label>
+            <textarea 
+              required 
+              name="description" 
+              rows={3} 
+              placeholder="Describe the quality issue in detail (e.g. tasteless, too salty, cold, etc.)" 
+              className="w-full bg-gray-50 dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            ></textarea>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Photo Evidence (Optional)</label>
+            <div className="flex items-center justify-center w-full">
+              <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl cursor-pointer bg-gray-50 dark:bg-[#1a1a1a] hover:bg-gray-100 dark:hover:bg-[#222] transition-colors">
+                <div className="flex flex-col items-center justify-center pt-3 pb-3">
+                  <Camera className="w-5 h-5 text-gray-400 mb-1" />
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                    {photoBase64 ? '✓ Image uploaded' : 'Click to upload photo evidence'}
+                  </p>
+                </div>
+                <input 
+                  type="file" 
+                  className="hidden" 
+                  accept="image/*" 
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        setPhotoBase64(reader.result as string);
+                        addToast('Photo loaded successfully!', 'success');
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }} 
+                />
+              </label>
+            </div>
+          </div>
+          <button 
+            type="submit" 
+            disabled={isSubmittingIssue}
+            className="w-full bg-[#16321F] dark:bg-emerald-950 text-white py-2.5 rounded-xl font-bold text-sm hover:bg-[#22442C] transition-colors disabled:opacity-50 cursor-pointer"
+          >
+            {isSubmittingIssue ? 'Submitting...' : 'Submit Quality Complaint'}
+          </button>
+        </form>
+      </div>
+    </div>
+  )}
+
+  {/* Confirm Button */}
+<div className="fixed bottom-20 left-0 w-full px-4 md:relative md:bottom-auto md:mt-8 z-30 flex justify-center md:justify-end">
+ <button
+ style={{ cursor: 'default' }}
+ className="bg-[#16321F] text-[#D9E96B] font-bold px-8 rounded-[20px] h-[56px] shadow-sm flex items-center justify-center gap-2 w-full md:w-auto text-base border border-emerald-400/20"
+ >
+ <Check className="w-5 h-5 text-emerald-400 bg-white/10 rounded-full p-0.5 animate-pulse" />
+ All choices are instantly saved & synced!
+ </button>
+ </div>
+
+ </div>
+ );
+}

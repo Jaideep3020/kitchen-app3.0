@@ -1,0 +1,626 @@
+     1	import React, { useState } from 'react';
+     2	import { 
+     3	  TrendingDown, ArrowUp, ArrowDown, Minus, ArrowRight, Sparkles, 
+     4	  DollarSign, Percent, AlertTriangle, TrendingUp, Package, Box, BarChart2
+     5	} from 'lucide-react';
+     6	import { 
+     7	  ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+     8	  BarChart, Bar, LineChart, Line, ComposedChart
+     9	} from 'recharts';
+    10	import { EfficiencyRecord, InventoryItem, Supplier, ActivityLog } from '../types';
+    11	
+    12	interface StaffReportsProps {
+    13	  isDarkMode?: boolean;
+    14	  efficiencyRecords: EfficiencyRecord[];
+    15	  optInCount: number;
+    16	  prepItems?: InventoryItem[];
+    17	  suppliers?: Supplier[];
+    18	  activityLogs?: ActivityLog[];
+    19	}
+    20	
+    21	export default function StaffReports({ 
+    22	  efficiencyRecords, 
+    23	  optInCount, 
+    24	  prepItems = [], 
+    25	  suppliers = [],
+    26	  activityLogs = [],
+    27	  isDarkMode = false
+    28	}: StaffReportsProps) {
+    29	  const [isLoading, setIsLoading] = React.useState(true);
+    30	  const [viewMode, setViewMode] = React.useState<'chart' | 'table'>('chart');
+    31	
+    32	  const themeColors = {
+    33	    grid: isDarkMode ? '#333333' : '#eee',
+    34	    tooltipBg: isDarkMode ? '#1a1a1a' : '#ffffff',
+    35	    tooltipColor: isDarkMode ? '#ffffff' : '#000000',
+    36	    tooltipBorder: isDarkMode ? '#333333' : '#f3f4f6',
+    37	    primary: isDarkMode ? '#D9E96B' : '#16321F',
+    38	    areaFill: isDarkMode ? '#333333' : '#f3f4f6',
+    39	    areaStroke: isDarkMode ? '#555555' : '#d1d5db',
+    40	    barMuted: isDarkMode ? '#333333' : '#e5e7eb'
+    41	  };
+    42	  
+    43	  React.useEffect(() => {
+    44	    const timer = setTimeout(() => {
+    45	      setIsLoading(false);
+    46	    }, 400);
+    47	    return () => clearTimeout(timer);
+    48	  }, []);
+    49	
+    50	  if (isLoading) {
+    51	    return (
+    52	      <div className="flex-grow max-w-7xl mx-auto w-full px-4 md:px-8 pt-0 pb-6 space-y-4">
+    53	        <div className="h-4 w-32 bg-gray-200 dark:bg-[#333333] rounded-xl animate-skeleton-pulse"></div>
+    54	        <div className="h-8 w-48 bg-gray-300 rounded-[20px] animate-skeleton-pulse"></div>
+    55	        <div className="h-48 bg-gray-100 dark:bg-[#222222] rounded-[24px] animate-skeleton-pulse mt-6"></div>
+    56	      </div>
+    57	    );
+    58	  }
+    59	
+    60	  // Derived or mocked data based on the provided inputs (or just intelligent placeholders for the analytics)
+    61	  const totalSpend = 14500 + (optInCount * 12);
+    62	  const prevSpend = 15200;
+    63	  const spendDiff = ((totalSpend - prevSpend) / prevSpend) * 100;
+    64	  
+    65	  const wastePercentage = Math.max(2, 12 - (optInCount * 0.1));
+    66	  const wasteCost = Math.round(totalSpend * (wastePercentage / 100));
+    67	  const forecastAccuracy = Math.min(98, 85 + (optInCount * 0.2));
+    68	
+    69	  // 2. Waste Management & Yield Analytics (Stacked Bar)
+    70	  const yieldWasteData = [
+    71	    { category: 'Produce', yield: 80, waste: 20 },
+    72	    { category: 'Meat', yield: 92, waste: 8 },
+    73	    { category: 'Dairy', yield: 95, waste: 5 },
+    74	    { category: 'Dry Goods', yield: 98, waste: 2 },
+    75	  ];
+    76	
+    77	  const wasteReasons = [
+    78	    { reason: 'Trimming / Prep', percentage: 45 },
+    79	    { reason: 'Over-preparation', percentage: 35 },
+    80	    { reason: 'Spoilage', percentage: 20 },
+    81	  ];
+    82	
+    83	  // 3. Purchase Prep & Inventory Tracking
+    84	  const supplierDeliveryData = [
+    85	    { week: 'W1', turnover: 4.2, onTime: 95 },
+    86	    { week: 'W2', turnover: 4.5, onTime: 92 },
+    87	    { week: 'W3', turnover: 4.8, onTime: 96 },
+    88	    { week: 'W4', turnover: 5.1, onTime: 98 },
+    89	  ];
+    90	
+    91	  const consumptionSpikesData = [
+    92	    { day: 'Mon', breakfast: 120, lunch: 340, dinner: 280 },
+    93	    { day: 'Tue', breakfast: 130, lunch: 320, dinner: 290 },
+    94	    { day: 'Wed', breakfast: 110, lunch: 350, dinner: 310 },
+    95	    { day: 'Thu', breakfast: 140, lunch: 380, dinner: 330 },
+    96	    { day: 'Fri', breakfast: 100, lunch: 310, dinner: 250 },
+    97	    { day: 'Sat', breakfast: 90, lunch: 200, dinner: 180 },
+    98	    { day: 'Sun', breakfast: 85, lunch: 210, dinner: 190 },
+    99	  ];
+   100	
+   101	  
+   102	  // 4. Predictive Engine & Forecasting
+   103	  const predictiveForecastData = [
+   104	    { day: 'Mon', actual: 42 + Math.floor(optInCount * 0.2), predicted: 40 + Math.floor(optInCount * 0.2) },
+   105	    { day: 'Tue', actual: 38 + Math.floor(optInCount * 0.2), predicted: 42 + Math.floor(optInCount * 0.2) },
+   106	    { day: 'Wed', actual: 45 + Math.floor(optInCount * 0.2), predicted: 44 + Math.floor(optInCount * 0.2) },
+   107	    { day: 'Thu', actual: 50 + Math.floor(optInCount * 0.2), predicted: 52 + Math.floor(optInCount * 0.2) },
+   108	    { day: 'Fri', actual: 0, predicted: 48 + Math.floor(optInCount * 0.3) }, // Future
+   109	    { day: 'Sat', actual: 0, predicted: 30 + Math.floor(optInCount * 0.1) },
+   110	    { day: 'Sun', actual: 0, predicted: 32 + Math.floor(optInCount * 0.1) },
+   111	  ];
+   112	
+   113	  // Trend Line Data (30 days)
+   114	  const spendAndWasteTrendData = Array.from({ length: 30 }, (_, i) => {
+   115	    const day = i + 1;
+   116	    // creating a slight upward trend then stabilizing
+   117	    const baseSpend = 300 + Math.sin(i / 3) * 50 + (i * 5); 
+   118	    const wastePercent = 0.08 + Math.cos(i / 4) * 0.02 - (i * 0.001); // improving waste
+   119	    return {
+   120	      date: `Day ${day}`,
+   121	      spend: Math.round(baseSpend),
+   122	      wasteCost: Math.round(baseSpend * wastePercent),
+   123	    };
+   124	  });
+   125	
+   126	
+   127	  // Sparkline data
+   128	  const sparklineSpend = Array.from({ length: 14 }, (_, i) => ({ day: i, value: 12000 + i * 200 + Math.random() * 1000 }));
+   129	  const sparklineWaste = Array.from({ length: 14 }, (_, i) => ({ day: i, value: 14 - i * 0.2 + Math.random() * 1 }));
+   130	  const sparklineWasteCost = Array.from({ length: 14 }, (_, i) => ({ day: i, value: 1800 - i * 30 + Math.random() * 150 }));
+   131	  const sparklineAccuracy = Array.from({ length: 14 }, (_, i) => ({ day: i, value: 85 + i * 0.8 + Math.random() * 3 }));
+   132	
+   133	  // Map real prep items to adjustments if available
+   134	  const adjustments = prepItems.length > 0 ? prepItems.slice(0, 4).map((item, i) => {
+   135	    // Calculate a simulated waste-to-consumption ratio per item
+   136	    const baseConsumption = item.targetStock * 0.8; 
+   137	    const baseWaste = item.targetStock * (0.05 + ((i % 3) * 0.08)); // varies from 5% to 21%
+   138	    
+   139	    const wasteRatio = baseConsumption > 0 ? baseWaste / baseConsumption : 0.1;
+   140	    
+   141	    // Suggest adjustments based on waste ratio
+   142	    // High waste ratio (> 15%) -> Cut order
+   143	    // Low waste ratio (< 10%) -> Increase order (high efficiency, can stock more)
+   144	    let suggestedAction = 'Cut';
+   145	    let amount = 0;
+   146	    
+   147	    if (wasteRatio > 0.15) {
+   148	      suggestedAction = 'Cut';
+   149	      // Cut quantity proportional to the excess waste
+   150	      amount = Math.ceil(item.targetStock * (wasteRatio - 0.10));
+   151	    } else {
+   152	      suggestedAction = 'Increase';
+   153	      // Increase quantity as waste is well managed
+   154	      amount = Math.ceil(item.targetStock * 0.15);
+   155	    }
+   156	
+   157	    return {
+   158	      item: item.name,
+   159	      action: suggestedAction,
+   160	      amount: amount,
+   161	      unit: item.unit,
+   162	      impact: `${suggestedAction === 'Cut' ? 'Reduces' : 'Prevents'} ${suggestedAction === 'Cut' ? 'waste' : 'shortage'} (${(wasteRatio * 100).toFixed(1)}% Waste Ratio)`
+   163	    };
+   164	  }) : [
+   165	    { item: 'Sona Masuri Rice', action: 'Increase', amount: 15, unit: 'kg', impact: 'Prevents shortage (8.5% Waste Ratio)' },
+   166	    { item: 'Fresh Tomatoes', action: 'Cut', amount: 5, unit: 'kg', impact: 'Reduces spoilage waste (18.2% Waste Ratio)' },
+   167	    { item: 'Toor Dal', action: 'Increase', amount: 8, unit: 'kg', impact: 'Matches upward trend (7.1% Waste Ratio)' },
+   168	  ];
+   169	
+   170	  return (
+   171	    <div id="staff_reports" className="flex-grow max-w-7xl mx-auto w-full px-4 md:px-8 py-6 space-y-6">
+   172	      <div className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+   173	        <div>
+   174	          <h2 className="text-3xl font-extrabold text-[#0A170E] dark:text-white mb-1">Analytical Engine</h2>
+   175	          <p className="text-sm text-gray-500 dark:text-gray-400">KPI Dashboard & Supply Chain Forecasting</p>
+   176	        </div>
+   177	        <div className="flex bg-gray-100 dark:bg-[#222] rounded-lg p-1 w-fit">
+   178	          <button 
+   179	            onClick={() => setViewMode('chart')}
+   180	            className={`px-4 py-1.5 text-sm font-bold rounded-md transition-colors ${viewMode === 'chart' ? 'bg-white dark:bg-[#333] text-[#16321F] dark:text-[#D9E96B] shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'}`}
+   181	          >
+   182	            Visual
+   183	          </button>
+   184	          <button 
+   185	            onClick={() => setViewMode('table')}
+   186	            className={`px-4 py-1.5 text-sm font-bold rounded-md transition-colors ${viewMode === 'table' ? 'bg-white dark:bg-[#333] text-[#16321F] dark:text-[#D9E96B] shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'}`}
+   187	          >
+   188	            Raw Data
+   189	          </button>
+   190	        </div>
+   191	      </div>
+   192	
+   193	      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
+   194	        {/* 1. Executive KPI Scorecard (2x2 Grid) */}
+   195	                <div className="grid grid-cols-2 gap-3 lg:gap-4 lg:col-span-1">
+   196	          {/* Total Spend */}
+   197	          <div className="bg-white dark:bg-[#121212] p-4 rounded-[16px] border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col justify-between overflow-hidden relative">
+   198	            <div className="relative z-10 flex items-center justify-between mb-2">
+   199	              <h3 className="text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-wider">Total Spend</h3>
+   200	              <div className={`p-1 rounded-full ${spendDiff < 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+   201	                <DollarSign className="w-3.5 h-3.5" />
+   202	              </div>
+   203	            </div>
+   204	            <div className="relative z-10">
+   205	              <div className="text-xl md:text-2xl font-black text-gray-900 dark:text-white">${totalSpend.toLocaleString()}</div>
+   206	              <div className="flex flex-wrap items-center gap-1 mt-0.5">
+   207	                <span className={`text-[10px] md:text-xs font-bold flex items-center ${spendDiff < 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+   208	                  {spendDiff < 0 ? <TrendingDown className="w-3 h-3 mr-0.5" /> : <TrendingUp className="w-3 h-3 mr-0.5" />}
+   209	                  {Math.abs(spendDiff).toFixed(1)}%
+   210	                </span>
+   211	                <span className="text-[10px] md:text-xs text-gray-400 hidden md:inline">vs prev</span>
+   212	              </div>
+   213	            </div>
+   214	            <div className="absolute bottom-0 left-0 right-0 h-16 opacity-30 pointer-events-none">
+   215	              <ResponsiveContainer width="100%" height="100%">
+   216	                <AreaChart data={sparklineSpend} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+   217	                  <Area type="monotone" dataKey="value" stroke={spendDiff < 0 ? '#10b981' : '#ef4444'} fill={spendDiff < 0 ? '#d1fae5' : '#fee2e2'} strokeWidth={2} />
+   218	                </AreaChart>
+   219	              </ResponsiveContainer>
+   220	            </div>
+   221	          </div>
+   222	
+   223	          {/* Overall Waste */}
+   224	          <div className="bg-white dark:bg-[#121212] p-4 rounded-[16px] border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col justify-between overflow-hidden relative">
+   225	            <div className="relative z-10 flex items-center justify-between mb-2">
+   226	              <h3 className="text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-wider">Waste</h3>
+   227	              <div className="p-1 rounded-full bg-amber-50 text-amber-600">
+   228	                <Percent className="w-3.5 h-3.5" />
+   229	              </div>
+   230	            </div>
+   231	            <div className="relative z-10">
+   232	              <div className="text-xl md:text-2xl font-black text-gray-900 dark:text-white">{wastePercentage.toFixed(1)}%</div>
+   233	              <div className="flex flex-wrap items-center gap-1 mt-0.5">
+   234	                <span className="text-[10px] md:text-xs font-bold flex items-center text-emerald-600">
+   235	                  <TrendingDown className="w-3 h-3 mr-0.5" />
+   236	                  -1.2%
+   237	                </span>
+   238	                <span className="text-[10px] md:text-xs text-gray-400 hidden md:inline">yield</span>
+   239	              </div>
+   240	            </div>
+   241	            <div className="absolute bottom-0 left-0 right-0 h-16 opacity-30 pointer-events-none">
+   242	              <ResponsiveContainer width="100%" height="100%">
+   243	                <AreaChart data={sparklineWaste} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+   244	                  <Area type="monotone" dataKey="value" stroke="#f59e0b" fill="#fef3c7" strokeWidth={2} />
+   245	                </AreaChart>
+   246	              </ResponsiveContainer>
+   247	            </div>
+   248	          </div>
+   249	
+   250	          {/* Cost of Waste */}
+   251	          <div className="bg-white dark:bg-[#121212] p-4 rounded-[16px] border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col justify-between overflow-hidden relative">
+   252	            <div className="relative z-10 flex items-center justify-between mb-2">
+   253	              <h3 className="text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-wider">Waste Cost</h3>
+   254	              <div className="p-1 rounded-full bg-red-50 text-red-600">
+   255	                <AlertTriangle className="w-3.5 h-3.5" />
+   256	              </div>
+   257	            </div>
+   258	            <div className="relative z-10">
+   259	              <div className="text-xl md:text-2xl font-black text-gray-900 dark:text-white">${wasteCost.toLocaleString()}</div>
+   260	              <div className="flex items-center gap-1 mt-0.5">
+   261	                <span className="text-[10px] md:text-xs font-bold flex items-center text-gray-500">
+   262	                  Value lost
+   263	                </span>
+   264	              </div>
+   265	            </div>
+   266	            <div className="absolute bottom-0 left-0 right-0 h-16 opacity-30 pointer-events-none">
+   267	              <ResponsiveContainer width="100%" height="100%">
+   268	                <AreaChart data={sparklineWasteCost} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+   269	                  <Area type="monotone" dataKey="value" stroke="#ef4444" fill="#fee2e2" strokeWidth={2} />
+   270	                </AreaChart>
+   271	              </ResponsiveContainer>
+   272	            </div>
+   273	          </div>
+   274	
+   275	          {/* Forecast Accuracy */}
+   276	          <div className="bg-white dark:bg-[#121212] p-4 rounded-[16px] border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col justify-between overflow-hidden relative">
+   277	            <div className="relative z-10 flex items-center justify-between mb-2">
+   278	              <h3 className="text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-wider">Accuracy</h3>
+   279	              <div className="p-1 rounded-full bg-[#16321F]/10 text-[#16321F] dark:bg-[#D9E96B]/20 dark:text-[#D9E96B]">
+   280	                <Sparkles className="w-3.5 h-3.5" />
+   281	              </div>
+   282	            </div>
+   283	            <div className="relative z-10">
+   284	              <div className="text-xl md:text-2xl font-black text-gray-900 dark:text-white">{forecastAccuracy.toFixed(1)}%</div>
+   285	              <div className="flex flex-wrap items-center gap-1 mt-0.5">
+   286	                <span className="text-[10px] md:text-xs font-bold flex items-center text-emerald-600">
+   287	                  <ArrowUp className="w-3 h-3 mr-0.5" />
+   288	                  +2.4%
+   289	                </span>
+   290	                <span className="text-[10px] md:text-xs text-gray-400 hidden md:inline">vs actual</span>
+   291	              </div>
+   292	            </div>
+   293	            <div className="absolute bottom-0 left-0 right-0 h-16 opacity-30 pointer-events-none">
+   294	              <ResponsiveContainer width="100%" height="100%">
+   295	                <AreaChart data={sparklineAccuracy} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+   296	                  <Area type="monotone" dataKey="value" stroke="#16321F" fill="#d1fae5" strokeWidth={2} />
+   297	                </AreaChart>
+   298	              </ResponsiveContainer>
+   299	            </div>
+   300	          </div>
+   301	        </div>
+   302	
+   303	      {/* 30-Day Trend Chart */}
+   304	      <div className="bg-white dark:bg-[#121212] p-6 rounded-[20px] border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col lg:col-span-2">
+   305	        <div className="mb-6 flex justify-between items-start">
+   306	          <div>
+   307	            <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+   308	              <TrendingUp className="w-4 h-4 text-[#16321F] dark:text-[#D9E96B]" />
+   309	              30-Day Spend & Waste Trend
+   310	            </h3>
+   311	            <p className="text-xs text-gray-500 mt-1">Total spend vs cost of waste over the last 30 days.</p>
+   312	          </div>
+   313	        </div>
+   314	        <div className="h-72 w-full mt-2">
+   315	          {viewMode === 'chart' ? (
+   316	            <>
+   317	              <div className="mb-4 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 p-3 rounded-xl flex items-start gap-2">
+   318	                <Sparkles className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
+   319	                <p className="text-sm text-blue-800 dark:text-blue-300"><strong>AI Insight:</strong> Waste costs have steadily decreased over the last 30 days due to better portion control and student opt-ins.</p>
+   320	              </div>
+   321	              <ResponsiveContainer width="100%" height="100%">
+   322	                <ComposedChart data={spendAndWasteTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+   323	                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={themeColors.grid} />
+   324	                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#888' }} dy={10} minTickGap={20} />
+   325	                  <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#888' }} tickFormatter={(val) => `${val}`} />
+   326	                  <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#888' }} tickFormatter={(val) => `${val}`} />
+   327	                  <Tooltip 
+   328	                    contentStyle={{ borderRadius: '12px', border: '1px solid ' + themeColors.tooltipBorder, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', backgroundColor: themeColors.tooltipBg, color: themeColors.tooltipColor }}
+   329	                    formatter={(value) => [`${value}`]}
+   330	                  />
+   331	                  <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+   332	                  <Area yAxisId="left" type="monotone" dataKey="spend" name="Total Spend" fill={themeColors.areaFill} stroke={themeColors.areaStroke} strokeWidth={2} />
+   333	                  <Line yAxisId="right" type="monotone" dataKey="wasteCost" name="Cost of Waste" stroke="#ef4444" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
+   334	                </ComposedChart>
+   335	              </ResponsiveContainer>
+   336	            </>
+   337	          ) : (
+   338	            <div className="h-full overflow-y-auto border border-gray-100 dark:border-gray-800 rounded-xl">
+   339	              <table className="w-full text-sm text-left">
+   340	                <thead className="text-xs text-gray-500 bg-gray-50 dark:bg-[#1a1a1a] sticky top-0">
+   341	                  <tr>
+   342	                    <th className="px-4 py-3">Date</th>
+   343	                    <th className="px-4 py-3">Total Spend</th>
+   344	                    <th className="px-4 py-3">Waste Cost</th>
+   345	                  </tr>
+   346	                </thead>
+   347	                <tbody>
+   348	                  {spendAndWasteTrendData.slice(-10).map((row, i) => (
+   349	                    <tr key={i} className="border-b border-gray-100 dark:border-gray-800">
+   350	                      <td className="px-4 py-2 font-medium text-gray-900 dark:text-gray-100">{row.date}</td>
+   351	                      <td className="px-4 py-2">${row.spend}</td>
+   352	                      <td className="px-4 py-2 text-red-500">${row.wasteCost}</td>
+   353	                    </tr>
+   354	                  ))}
+   355	                </tbody>
+   356	              </table>
+   357	            </div>
+   358	          )}
+   359	        </div>
+   360	      </div>
+   361	      </div>
+   362	<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+   363	        {/* 2. Waste Management & Yield Analytics */}
+   364	        <div className="bg-white dark:bg-[#121212] p-6 rounded-[20px] border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col">
+   365	          <div className="mb-6">
+   366	            <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+   367	              <Box className="w-4 h-4 text-amber-500" />
+   368	              Yield vs Preparation Waste
+   369	            </h3>
+   370	            <p className="text-xs text-gray-500 mt-1">Usable yield versus waste by ingredient category.</p>
+   371	          </div>
+   372	          
+   373	          <div className="h-72 w-full flex flex-col">
+   374	            {viewMode === 'chart' ? (
+   375	              <>
+   376	                <div className="mb-4 bg-purple-50 dark:bg-purple-900/10 border border-purple-100 dark:border-purple-900/30 p-3 rounded-xl flex items-start gap-2 shrink-0">
+   377	                  <Sparkles className="w-4 h-4 text-purple-500 mt-0.5 shrink-0" />
+   378	                  <p className="text-sm text-purple-800 dark:text-purple-300"><strong>AI Insight:</strong> Tuesday dinners see a 15% spike in consumption; recommend increasing prep by 5kg.</p>
+   379	                </div>
+   380	                <div className="flex-grow min-h-0">
+   381	                  <ResponsiveContainer width="100%" height="100%">
+   382	                    <LineChart data={consumptionSpikesData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+   383	                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={themeColors.grid} />
+   384	                      <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#888' }} dy={10} />
+   385	                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#888' }} />
+   386	                      <Tooltip 
+   387	                        contentStyle={{ borderRadius: '12px', border: '1px solid ' + themeColors.tooltipBorder, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', backgroundColor: themeColors.tooltipBg, color: themeColors.tooltipColor }}
+   388	                      />
+   389	                      <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+   390	                      <Line type="monotone" dataKey="breakfast" name="Breakfast" stroke="#3b82f6" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
+   391	                      <Line type="monotone" dataKey="lunch" name="Lunch" stroke={themeColors.primary} strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
+   392	                      <Line type="monotone" dataKey="dinner" name="Dinner" stroke="#8b5cf6" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
+   393	                    </LineChart>
+   394	                  </ResponsiveContainer>
+   395	                </div>
+   396	              </>
+   397	            ) : (
+   398	              <div className="h-full overflow-y-auto border border-gray-100 dark:border-gray-800 rounded-xl">
+   399	                <table className="w-full text-sm text-left">
+   400	                  <thead className="text-xs text-gray-500 bg-gray-50 dark:bg-[#1a1a1a] sticky top-0">
+   401	                    <tr>
+   402	                      <th className="px-4 py-3">Day</th>
+   403	                      <th className="px-4 py-3">Breakfast (vol)</th>
+   404	                      <th className="px-4 py-3">Lunch (vol)</th>
+   405	                      <th className="px-4 py-3">Dinner (vol)</th>
+   406	                    </tr>
+   407	                  </thead>
+   408	                  <tbody>
+   409	                    {consumptionSpikesData.map((row, i) => (
+   410	                      <tr key={i} className="border-b border-gray-100 dark:border-gray-800">
+   411	                        <td className="px-4 py-2 font-medium text-gray-900 dark:text-gray-100">{row.day}</td>
+   412	                        <td className="px-4 py-2 text-blue-600 dark:text-blue-400">{row.breakfast}</td>
+   413	                        <td className="px-4 py-2 text-emerald-600 dark:text-emerald-400">{row.lunch}</td>
+   414	                        <td className="px-4 py-2 text-purple-600 dark:text-purple-400">{row.dinner}</td>
+   415	                      </tr>
+   416	                    ))}
+   417	                  </tbody>
+   418	                </table>
+   419	              </div>
+   420	            )}
+   421	          </div>
+   422	                <ResponsiveContainer width="100%" height="80%">
+   423	                  <BarChart data={yieldWasteData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+   424	                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={themeColors.grid} />
+   425	                    <XAxis dataKey="category" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#888' }} dy={10} />
+   426	                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#888' }} />
+   427	                    <Tooltip 
+   428	                      cursor={{ fill: 'rgba(0,0,0,0.02)' }}
+   429	                      contentStyle={{ borderRadius: '12px', border: '1px solid ' + themeColors.tooltipBorder, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', backgroundColor: themeColors.tooltipBg, color: themeColors.tooltipColor }}
+   430	                    />
+   431	                    <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+   432	                    <Bar dataKey="yield" name="Usable Yield %" stackId="a" fill={themeColors.primary} radius={[0, 0, 4, 4]} />
+   433	                    <Bar dataKey="waste" name="Waste %" stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} />
+   434	                  </BarChart>
+   435	                </ResponsiveContainer>
+   436	              </>
+   437	            ) : (
+   438	              <div className="h-full overflow-y-auto border border-gray-100 dark:border-gray-800 rounded-xl">
+   439	                <table className="w-full text-sm text-left">
+   440	                  <thead className="text-xs text-gray-500 bg-gray-50 dark:bg-[#1a1a1a]">
+   441	                    <tr>
+   442	                      <th className="px-4 py-3">Category</th>
+   443	                      <th className="px-4 py-3">Usable Yield %</th>
+   444	                      <th className="px-4 py-3">Waste %</th>
+   445	                    </tr>
+   446	                  </thead>
+   447	                  <tbody>
+   448	                    {yieldWasteData.map((row, i) => (
+   449	                      <tr key={i} className="border-b border-gray-100 dark:border-gray-800">
+   450	                        <td className="px-4 py-2 font-medium text-gray-900 dark:text-gray-100">{row.category}</td>
+   451	                        <td className="px-4 py-2 text-emerald-600 dark:text-emerald-400">{row.yield}%</td>
+   452	                        <td className="px-4 py-2 text-red-500">{row.waste}%</td>
+   453	                      </tr>
+   454	                    ))}
+   455	                  </tbody>
+   456	                </table>
+   457	              </div>
+   458	            )}
+   459	          </div>
+   460	
+   461	          <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-800">
+   462	            <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Primary Waste Drivers</h4>
+   463	            <div className="space-y-3">
+   464	              {wasteReasons.map((reason, idx) => (
+   465	                <div key={idx} className="flex items-center justify-between">
+   466	                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{reason.reason}</span>
+   467	                  <div className="flex items-center gap-3 w-1/2">
+   468	                    <div className="flex-grow h-2 bg-gray-100 dark:bg-[#222] rounded-full overflow-hidden">
+   469	                      <div className="h-full bg-amber-500 rounded-full" style={{ width: `${reason.percentage}%` }}></div>
+   470	                    </div>
+   471	                    <span className="text-xs font-bold text-gray-900 dark:text-white w-8 text-right">{reason.percentage}%</span>
+   472	                  </div>
+   473	                </div>
+   474	              ))}
+   475	            </div>
+   476	          </div>
+   477	        </div>
+   478	
+   479	        {/* 3. Purchase Preparation & Inventory Tracking */}
+   480	        <div className="bg-white dark:bg-[#121212] p-6 rounded-[20px] border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col">
+   481	          <div className="mb-6">
+   482	            <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+   483	              <Package className="w-4 h-4 text-blue-500" />
+   484	              Consumption Volume Spikes
+   485	            </h3>
+   486	            <p className="text-xs text-gray-500 mt-1">Consumption trends tracking volume spikes over the week.</p>
+   487	          </div>
+   488	          
+   489	          <div className="h-64 w-full">
+   490	            <ResponsiveContainer width="100%" height="100%">
+   491	              <LineChart data={consumptionSpikesData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+   492	                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={themeColors.grid} />
+   493	                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#888' }} dy={10} />
+   494	                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#888' }} />
+   495	                <Tooltip 
+   496	                  contentStyle={{ borderRadius: '12px', border: '1px solid ' + themeColors.tooltipBorder, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', backgroundColor: themeColors.tooltipBg, color: themeColors.tooltipColor }}
+   497	                />
+   498	                <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+   499	                <Line type="monotone" dataKey="breakfast" name="Breakfast" stroke="#3b82f6" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
+   500	                <Line type="monotone" dataKey="lunch" name="Lunch" stroke={themeColors.primary} strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
+   501	                <Line type="monotone" dataKey="dinner" name="Dinner" stroke="#8b5cf6" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
+   502	              </LineChart>
+   503	            </ResponsiveContainer>
+   504	          </div>
+   505	
+   506	          <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-800">
+   507	            <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Supplier Delivery & Turnover</h4>
+   508	            <div className="grid grid-cols-2 gap-4">
+   509	              <div className="bg-gray-50 dark:bg-[#1a1a1a] p-3 rounded-[12px] border border-gray-100 dark:border-gray-800">
+   510	                <div className="text-[10px] uppercase font-bold text-gray-400 mb-1">Avg Inventory Turnover</div>
+   511	                <div className="text-xl font-black text-gray-900 dark:text-white">4.8 <span className="text-xs font-medium text-gray-500">turns/mo</span></div>
+   512	              </div>
+   513	              <div className="bg-gray-50 dark:bg-[#1a1a1a] p-3 rounded-[12px] border border-gray-100 dark:border-gray-800">
+   514	                <div className="text-[10px] uppercase font-bold text-gray-400 mb-1">On-Time Deliveries</div>
+   515	                <div className="text-xl font-black text-emerald-600">96.5%</div>
+   516	              </div>
+   517	            </div>
+   518	          </div>
+   519	        </div>
+   520	      </div>
+   521	
+   522	      {/* 4. Predictive Engine & Forecasting */}
+   523	      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+   524	        <div className="lg:col-span-2 bg-white dark:bg-[#121212] p-6 rounded-[20px] border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col">
+   525	          <div className="mb-6 flex justify-between items-start">
+   526	            <div>
+   527	              <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+   528	                <BarChart2 className="w-4 h-4 text-[#16321F] dark:text-[#D9E96B]" />
+   529	                Predictive Order Quantities
+   530	              </h3>
+   531	              <p className="text-xs text-gray-500 mt-1">Projecting ingredient needs based on historical usage and waste trends.</p>
+   532	            </div>
+   533	            <div className="px-3 py-1 bg-[#16321F]/10 text-[#16321F] dark:bg-[#D9E96B]/20 dark:text-[#D9E96B] rounded-full text-xs font-bold flex items-center gap-1.5">
+   534	              <Sparkles className="w-3.5 h-3.5" />
+   535	              AI Powered
+   536	            </div>
+   537	          </div>
+   538	          
+   539	          <div className="h-72 w-full mt-2 flex flex-col">
+   540	            {viewMode === 'chart' ? (
+   541	              <>
+   542	                <div className="mb-4 bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-900/30 p-3 rounded-xl flex items-start gap-2 shrink-0">
+   543	                  <Sparkles className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
+   544	                  <p className="text-sm text-emerald-800 dark:text-emerald-300"><strong>AI Insight:</strong> Upcoming weekend forecasts suggest a 20% drop in overall demand; adjust bulk orders accordingly.</p>
+   545	                </div>
+   546	                <div className="flex-grow min-h-0">
+   547	                  <ResponsiveContainer width="100%" height="100%">
+   548	                    <ComposedChart data={predictiveForecastData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+   549	                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={themeColors.grid} />
+   550	                      <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#888' }} dy={10} />
+   551	                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#888' }} />
+   552	                      <Tooltip 
+   553	                        contentStyle={{ borderRadius: '12px', border: '1px solid ' + themeColors.tooltipBorder, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', backgroundColor: themeColors.tooltipBg, color: themeColors.tooltipColor }}
+   554	                      />
+   555	                      <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+   556	                      <Bar dataKey="actual" name="Actual Consumption" fill={themeColors.barMuted} radius={[4, 4, 0, 0]} barSize={30} />
+   557	                      <Line type="monotone" dataKey="predicted" name="Predicted Forecast" stroke={themeColors.primary} strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} strokeDasharray="5 5" />
+   558	                    </ComposedChart>
+   559	                  </ResponsiveContainer>
+   560	                </div>
+   561	              </>
+   562	            ) : (
+   563	              <div className="h-full overflow-y-auto border border-gray-100 dark:border-gray-800 rounded-xl">
+   564	                <table className="w-full text-sm text-left">
+   565	                  <thead className="text-xs text-gray-500 bg-gray-50 dark:bg-[#1a1a1a] sticky top-0">
+   566	                    <tr>
+   567	                      <th className="px-4 py-3">Day</th>
+   568	                      <th className="px-4 py-3">Actual Consumption</th>
+   569	                      <th className="px-4 py-3">Predicted Forecast</th>
+   570	                    </tr>
+   571	                  </thead>
+   572	                  <tbody>
+   573	                    {predictiveForecastData.map((row, i) => (
+   574	                      <tr key={i} className="border-b border-gray-100 dark:border-gray-800">
+   575	                        <td className="px-4 py-2 font-medium text-gray-900 dark:text-gray-100">{row.day}</td>
+   576	                        <td className="px-4 py-2 text-gray-600 dark:text-gray-400">{row.actual || '-'}</td>
+   577	                        <td className="px-4 py-2 text-emerald-600 dark:text-emerald-400">{row.predicted}</td>
+   578	                      </tr>
+   579	                    ))}
+   580	                  </tbody>
+   581	                </table>
+   582	              </div>
+   583	            )}
+   584	          </div>
+   585	        </div>
+   586	
+   587	        <div className="bg-[#16321F] text-white p-6 rounded-[20px] shadow-sm flex flex-col relative overflow-hidden">
+   588	          <div className="absolute top-0 right-0 p-4 opacity-10">
+   589	            <Sparkles className="w-24 h-24" />
+   590	          </div>
+   591	          <div className="relative z-10 mb-6">
+   592	            <h3 className="text-sm font-bold text-[#D9E96B] flex items-center gap-2 mb-1">
+   593	              Suggested Order Adjustments
+   594	            </h3>
+   595	            <p className="text-xs text-white/70">Optimized to balance waste vs consumption</p>
+   596	          </div>
+   597	
+   598	          <div className="relative z-10 space-y-4 flex-grow">
+   599	            {adjustments.map((adj, idx) => (
+   600	              <div key={idx} className="bg-white/10 p-3.5 rounded-xl border border-white/10 backdrop-blur-sm">
+   601	                <div className="flex justify-between items-start mb-2">
+   602	                  <div className="font-bold text-sm">{adj.item}</div>
+   603	                  <div className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${adj.action === 'Cut' ? 'bg-red-500/20 text-red-200' : 'bg-emerald-500/20 text-emerald-200'}`}>
+   604	                    {adj.action} Order
+   605	                  </div>
+   606	                </div>
+   607	                <div className="flex items-end justify-between">
+   608	                  <div className="text-xs text-white/60 font-medium">
+   609	                    {adj.impact}
+   610	                  </div>
+   611	                  <div className="text-xl font-black text-[#D9E96B]">
+   612	                    {adj.action === 'Cut' ? '-' : '+'}{adj.amount}<span className="text-sm ml-0.5 text-[#D9E96B]/70">{adj.unit}</span>
+   613	                  </div>
+   614	                </div>
+   615	              </div>
+   616	            ))}
+   617	          </div>
+   618	
+   619	          <button className="relative z-10 mt-6 w-full py-3 bg-[#D9E96B] hover:bg-white text-[#16321F] rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2">
+   620	            Apply All Adjustments <ArrowRight className="w-4 h-4" />
+   621	          </button>
+   622	        </div>
+   623	      </div>
+   624	    </div>
+   625	  );
+   626	}
