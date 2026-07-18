@@ -22,7 +22,7 @@ import {
   weeklyMenus,
   menuSlots,
   rsvps
-} from "./src/db/schema.ts";
+, prepLogs } from "./src/db/schema.ts";
 import { eq, desc, sql } from 'drizzle-orm';
 import { GoogleGenAI } from '@google/genai';
 import multer from 'multer';
@@ -1366,6 +1366,54 @@ app.post('/api/system/simulate-load', async (req, res) => {
 });
 
 // ----------------------------------------------------
+
+// --- PREP LOGS ---
+app.get('/api/prep-logs', async (req, res) => {
+  try {
+    const { date } = req.query;
+    let list;
+    if (date) {
+      list = await db.select().from(prepLogs);
+      list = list.filter(l => String(l.date) === String(date));
+    } else {
+      list = await db.select().from(prepLogs);
+    }
+    res.json(list);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch prep logs' });
+  }
+});
+
+app.post('/api/prep-logs', async (req, res) => {
+  try {
+    const { date, mealType, menuItemId, actualQtyCooked, loggedBy } = req.body;
+    
+    const existing = await db.select().from(prepLogs);
+    const matching = existing.filter(e => String(e.menuItemId) === String(menuItemId) && String(e.date) === String(date) && String(e.mealType) === String(mealType));
+    
+    let result;
+    if (matching.length > 0) {
+      const id = matching[0].id;
+      result = await db.update(prepLogs).set({
+        actualQtyCooked: String(actualQtyCooked),
+        loggedBy,
+        loggedAt: new Date()
+      }).where(eq(prepLogs.id, id)).returning();
+    } else {
+      result = await db.insert(prepLogs).values({
+        date,
+        mealType,
+        menuItemId,
+        actualQtyCooked: String(actualQtyCooked),
+        loggedBy
+      }).returning();
+    }
+    res.json(result[0]);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to save prep log' });
+  }
+});
+
 // Dev/Prod SPA Serving
 // ----------------------------------------------------
 async function startServer() {

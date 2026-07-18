@@ -107,6 +107,7 @@ const mockStorage: Record<string, any[]> = {
   issues: [],
   waste_logs: [],
   past_orders: [],
+  prep_logs: [],
   dashboard_configs: [
     {
       id: 1,
@@ -147,16 +148,16 @@ function createMockDrizzle() {
             if (clause.left && clause.left.name) {
               filterCol = clause.left.name;
               filterVal = clause.right !== undefined ? clause.right : clause.value;
-            } else if (clause.queryChunks && clause.queryChunks.length >= 3) {
+            } else if (clause.queryChunks && clause.queryChunks.length >= 4) {
               // Hack for mock Drizzle
-              const col = clause.queryChunks[0];
-              const valChunk = clause.queryChunks[2];
+              const col = clause.queryChunks[1]; // Index 1 is the column PgText
+              const valChunk = clause.queryChunks[3]; // Index 3 is the Param
               if (col && col.name) {
-                // Determine the camelCase name of the column
-                // Recipes uses 'menuItemId' instead of 'menu_item_id' in memory!
                 filterCol = col.name === 'menu_item_id' ? 'menuItemId' : col.name === 'ingredient_id' ? 'ingredientId' : col.name;
               }
-              if (valChunk && valChunk.sql && valChunk.sql.queryChunks) {
+              if (valChunk && valChunk.value !== undefined) {
+                filterVal = valChunk.value;
+              } else if (valChunk && valChunk.sql && valChunk.sql.queryChunks) {
                 filterVal = valChunk.sql.queryChunks[0].value[0];
               }
             } else if (clause.value !== undefined) {

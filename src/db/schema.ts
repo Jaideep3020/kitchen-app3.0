@@ -1,5 +1,5 @@
 import { relations } from 'drizzle-orm';
-import { integer, pgTable, serial, text, timestamp, boolean, decimal, jsonb, index, real } from 'drizzle-orm/pg-core';
+import { integer, pgTable, serial, text, timestamp, boolean, decimal, jsonb, index, real, date } from 'drizzle-orm/pg-core';
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
@@ -149,3 +149,13 @@ export const rsvps = pgTable('rsvps', {
 
 
 
+
+export const prepLogs = pgTable('prep_logs', {
+  id: serial('id').primaryKey(),
+  date: date('date').notNull(),
+  mealType: text('meal_type').notNull(),
+  menuItemId: text('menu_item_id').notNull().references(() => menuItems.id),
+  actualQtyCooked: decimal('actual_qty_cooked').notNull(),
+  loggedBy: text('logged_by').notNull().references(() => users.email),
+  loggedAt: timestamp('logged_at').defaultNow()
+});

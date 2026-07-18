@@ -34,7 +34,7 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
  onDateChange,
  onDayChange
 }: StaffOpsProps) {
- const { menuItems, wasteLogs, setWasteLogs, prepProgress, setPrepProgress, mealOptIns, activeOrders, recipes } = useData();
+ const { menuItems, wasteLogs, setWasteLogs, prepProgress, setPrepProgress, mealOptIns, activeOrders, recipes, activeWeekStartDate } = useData();
  const { addToast } = useToast();
  // Stateful filter & category options
  const [isSavingPrep, setIsSavingPrep] = useState(false);
@@ -118,7 +118,36 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
   }, [selectedDay, prepProgress]);
 
  // Category display names
- const categoryLabels: Record<CategoryType, string> = {
+ 
+  const [actualQtyCooked, setActualQtyCooked] = useState<{ [key: string]: string }>({});
+  
+  const getPrepDate = (dayName: string) => {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const base = new Date(activeWeekStartDate);
+    const targetIdx = days.indexOf(dayName);
+    const baseIdx = base.getDay();
+    const diff = targetIdx - baseIdx;
+    base.setDate(base.getDate() + diff);
+    return base.toISOString().split('T')[0];
+  };
+
+  React.useEffect(() => {
+    const day = selectedDay || 'Thursday';
+    const date = getPrepDate(day);
+    fetch('/api/prep-logs?date=' + date)
+      .then(res => res.json())
+      .then(data => {
+        const qtys: any = {};
+        if (Array.isArray(data)) {
+          data.forEach(log => {
+            qtys[log.menuItemId] = log.actualQtyCooked;
+          });
+        }
+        setActualQtyCooked(qtys);
+      }).catch(console.error);
+  }, [selectedDay, activeWeekStartDate]);
+
+  const categoryLabels: Record<CategoryType, string> = {
  all: 'All Ingredients',
  grains_lentils: 'Grains & Lentils',
  proteins_dairy: 'Proteins & Dairy',
@@ -319,12 +348,39 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
  activeIngredientNames.has(item.name)
  );
 
- const handleSavePrepProgress = () => {
+ 
+  const handleSavePrepProgress = async () => {
     triggerHaptic('success');
     setIsSavingPrep(true);
     
-    // Simulate network delay for the saving indicator
+    const day = selectedDay || 'Thursday';
+    const date = getPrepDate(day);
+    
+    try {
+      const activePrepDayForWaste = selectedDay || 'Thursday';
+      const dishesForDayForWaste = menuItems.filter(item => item.dayOfWeek === activePrepDayForWaste);
+      
+      for (const dish of dishesForDayForWaste) {
+        if (actualQtyCooked[dish.id]) {
+          await fetch('/api/prep-logs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              date,
+              mealType: dish.mealType,
+              menuItemId: dish.id,
+              actualQtyCooked: actualQtyCooked[dish.id],
+              loggedBy: 'staff@kitchenops.edu'
+            })
+          });
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    
     setTimeout(() => {
+
       const day = selectedDay || 'Thursday';
       setPrepProgress(prev => [...prev.filter((p: PrepProgress) => p.day !== day), { day, portions: prepPortions }]);
       
@@ -1011,12 +1067,29 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
  />
  <div className="flex justify-between text-xs text-gray-400 dark:text-gray-400 font-medium">
  <span>Min: {minVol}</span>
- <span>Max: {maxVol}</span>
- </div>
- </div>
- </>
- );
- })()}
+ <span>Max: {maxVol}</span></div></div><hr className="border-gray-50" />
+        <div className="space-y-2">
+          <div className="flex justify-between items-center text-xs font-medium text-gray-500 font-mono">
+            <span>Actual Qty Cooked:</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <input 
+              type="number" 
+              placeholder="e.g. 42"
+              value={actualQtyCooked[dish.id] || ''}
+              onChange={(e) => {
+                const val = e.target.value;
+                setActualQtyCooked(prev => ({ ...prev, [dish.id]: val }));
+              }}
+              className="w-full text-sm font-bold bg-gray-50 dark:bg-[#222222] border border-gray-100 dark:border-gray-800 rounded-lg px-3 py-2 text-[#16321F] dark:text-[#D9E96B]"
+            />
+            <span className="text-xs text-gray-500">{prepVolUnit}</span>
+          </div>
+        </div>
+      </>
+    );
+
+          })()}
  </div>
  </motion.div>
  );
