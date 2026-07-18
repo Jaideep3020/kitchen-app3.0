@@ -22,7 +22,7 @@ import {
   weeklyMenus,
   menuSlots,
   rsvps
-, prepLogs, staples } from "./src/db/schema.ts";
+, prepLogs, staples, stockTransactions } from "./src/db/schema.ts";
 import { eq, desc, sql } from 'drizzle-orm';
 import { GoogleGenAI } from '@google/genai';
 import multer from 'multer';
@@ -486,7 +486,7 @@ app.post('/api/inventory', async (req, res) => {
     }).returning();
     logEvent('DATABASE', `Created inventory item ID ${result[0]?.id}`);
     cache.del('inventory');
-    broadcastEvent('inventory-updated', {});
+    cache.del('inventory'); broadcastEvent('inventory-updated', {});
     res.json(result[0]);
   } catch (err) {
     logEvent('ERROR', `Failed to create inventory item: ${err}`);
@@ -516,7 +516,7 @@ app.put('/api/inventory/:id', async (req, res) => {
     
     logEvent('DATABASE', `Updated inventory item ID ${id}`);
     cache.del('inventory');
-    broadcastEvent('inventory-updated', {});
+    cache.del('inventory'); broadcastEvent('inventory-updated', {});
     res.json(result[0]);
   } catch (err) {
     logEvent('ERROR', `Failed to update inventory item: ${err}`);
@@ -530,7 +530,7 @@ app.delete('/api/inventory/:id', async (req, res) => {
     await db.delete(inventoryItems).where(eq(inventoryItems.id, id));
     logEvent('DATABASE', `Deleted inventory item ID ${id}`);
     cache.del('inventory');
-    broadcastEvent('inventory-updated', {});
+    cache.del('inventory'); broadcastEvent('inventory-updated', {});
     res.json({ success: true });
   } catch (err) {
     logEvent('ERROR', `Failed to delete inventory item: ${err}`);
@@ -643,12 +643,15 @@ app.post('/api/weekly-menus/publish', async (req, res) => {
     
     for (const day of days) {
       for (const staple of activeStaples) {
-        slots.push({
-          weeklyMenuId: menuId,
-          dayOfWeek: day,
-          mealType: staple.mealType,
-          menuItemId: String(staple.menuItemId),
-        });
+        const exists = slots.find(s => s.dayOfWeek === day && s.mealType === staple.mealType && s.menuItemId === String(staple.menuItemId));
+        if (!exists) {
+          slots.push({
+            weeklyMenuId: menuId,
+            dayOfWeek: day,
+            mealType: staple.mealType,
+            menuItemId: String(staple.menuItemId),
+          });
+        }
       }
     }
 
@@ -697,6 +700,16 @@ app.post('/api/staples', async (req, res) => {
     res.json(result[0]);
   } catch (err) {
     res.status(500).json({ error: 'Failed to save staple' });
+  }
+});
+
+
+app.get('/api/stock-transactions', async (req, res) => {
+  try {
+    const list = await db.select().from(stockTransactions);
+    res.json(list);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed' });
   }
 });
 
@@ -818,6 +831,46 @@ app.post('/api/rsvps', async (req, res) => {
       return res.status(400).json({ error: 'email, date, and mealType are required' });
     }
     
+    // Server-side cutoff check
+    const orgId = 'default-org';
+    const configList = await db.select().from(dashboardConfigs).where(eq(dashboardConfigs.organizationId, orgId));
+    let cutoffEnforced = false;
+    if (configList.length > 0 && configList[0].config?.cutoffExempted) {
+      cutoffEnforced = true;
+    }
+    
+    const now = new Date();
+    // Parse target date assuming YYYY-MM-DD
+    const [y, m, d] = date.split('-');
+    const targetDate = new Date(parseInt(y), parseInt(m)-1, parseInt(d));
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    const diffTime = targetDate.getTime() - today.getTime();
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+    const currentHour = now.getHours(); console.log('diffDays', diffDays, 'cutoffEnforced', cutoffEnforced);
+    
+    let locked = false;
+    let reason = '';
+    
+    if (diffDays < 0) {
+      locked = true;
+      reason = 'This date is in the past.';
+    } else if (diffDays === 0) {
+      if (cutoffEnforced) {
+        locked = true;
+        reason = 'RSVP closed (cutoff is enforced today).';
+      }
+    } else if (diffDays === 1) {
+      if (currentHour >= 21) {
+        locked = true;
+        reason = 'Locked: passed 9 PM cutoff night prior.';
+      }
+    }
+    
+    if (locked) {
+      return res.status(403).json({ error: reason });
+    }
+    
     let user = await db.select().from(users).where(eq(users.email, email)).then(rows => rows[0]);
     if (!user) {
       const inserted = await db.insert(users).values({ uid: email, email, role: 'student' }).returning();
@@ -842,6 +895,16 @@ app.post('/api/rsvps', async (req, res) => {
   } catch (err) {
     logEvent('ERROR', `Failed to submit RSVP: ${err}`);
     res.status(500).json({ error: 'Failed to submit RSVP' });
+  }
+});
+
+
+app.get('/api/rsvps/all', async (req, res) => {
+  try {
+    const list = await db.select().from(rsvps);
+    res.json(list);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed' });
   }
 });
 
@@ -1443,14 +1506,18 @@ app.post('/api/prep-logs', async (req, res) => {
     const existing = await db.select().from(prepLogs);
     const matching = existing.filter(e => String(e.menuItemId) === String(menuItemId) && String(e.date) === String(date) && String(e.mealType) === String(mealType));
     
+    let oldQty = 0;
     let result;
+    let prepLogId;
     if (matching.length > 0) {
       const id = matching[0].id;
+      oldQty = Number(matching[0].actualQtyCooked);
       result = await db.update(prepLogs).set({
         actualQtyCooked: String(actualQtyCooked),
         loggedBy,
         loggedAt: new Date()
       }).where(eq(prepLogs.id, id)).returning();
+      prepLogId = id;
     } else {
       result = await db.insert(prepLogs).values({
         date,
@@ -1459,10 +1526,49 @@ app.post('/api/prep-logs', async (req, res) => {
         actualQtyCooked: String(actualQtyCooked),
         loggedBy
       }).returning();
+      prepLogId = result[0].id;
     }
+    
+    const deltaQty = Number(actualQtyCooked) - oldQty; console.log('deltaQty:', deltaQty);
+    
+    if (deltaQty !== 0) {
+      // Deduct stock
+      const allRecipes = await db.select().from(recipes);
+      const dishRecipes = allRecipes.filter(r => String(r.menuItemId) === String(menuItemId)); console.log('allRecipes length:', allRecipes.length, 'dishRecipes length:', dishRecipes.length);
+      const allInventory = await db.select().from(inventoryItems);
+      
+      for (const rec of dishRecipes) {
+        const deduction = Number(rec.qtyPerServing) * deltaQty;
+        if (deduction !== 0) {
+          const invItem = allInventory.find(i => String(i.id) === String(rec.ingredientId));
+          if (!invItem) {
+            throw new Error(`Ingredient ${rec.ingredientId} not found in inventory for dish ${menuItemId}`);
+          }
+          const newStock = Number(invItem.currentStock) - deduction;
+          
+          // Fail-closed where clause - if the eq() doesn't evaluate cleanly, our patched mock Drizzle will throw.
+          await db.update(inventoryItems).set({
+            currentStock: String(newStock)
+          }).where(eq(inventoryItems.id, rec.ingredientId));
+          
+          await db.insert(stockTransactions).values({
+            ingredientId: String(rec.ingredientId),
+            amount: String(-deduction), // negative amount for deduction
+            reason: 'prep',
+            relatedPrepLogId: prepLogId,
+            createdAt: new Date()
+          });
+        }
+      }
+    }
+    
+    // Broadcast inventory update
+    cache.del('inventory'); broadcastEvent('inventory-updated', {});
+    
     res.json(result[0]);
   } catch (err) {
-    res.status(500).json({ error: 'Failed to save prep log' });
+    console.error(err);
+    res.status(500).json({ error: 'Failed to save prep log: ' + err.message });
   }
 });
 

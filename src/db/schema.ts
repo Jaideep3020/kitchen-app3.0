@@ -168,3 +168,14 @@ export const staples = pgTable('staples', {
   alwaysIncluded: boolean('always_included').notNull().default(true),
 });
 
+
+
+export const stockTransactions = pgTable('stock_transactions', {
+  id: serial('id').primaryKey(),
+  ingredientId: text('ingredient_id').notNull(),
+  amount: decimal('amount').notNull(),
+  reason: text('reason').notNull(),
+  relatedPrepLogId: integer('related_prep_log_id').references(() => prepLogs.id),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+

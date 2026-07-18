@@ -109,6 +109,7 @@ const mockStorage: Record<string, any[]> = {
   past_orders: [],
   prep_logs: [],
   staples: [],
+  stock_transactions: [],
   dashboard_configs: [
     {
       id: 1,
@@ -147,13 +148,14 @@ function createMockDrizzle() {
         if (clause) {
           if (clause.left && clause.left.name) {
             filterCol = clause.left.name;
+            filterCol = filterCol === 'menu_item_id' ? 'menuItemId' : filterCol === 'ingredient_id' ? 'ingredientId' : filterCol === 'organization_id' ? 'organizationId' : filterCol;
             filterVal = clause.right !== undefined ? clause.right : clause.value;
           } else if (clause.queryChunks && clause.queryChunks.length >= 4) {
             // Hack for mock Drizzle
             const col = clause.queryChunks[1]; // Index 1 is the column PgText
             const valChunk = clause.queryChunks[3]; // Index 3 is the Param
             if (col && col.name) {
-              filterCol = col.name === 'menu_item_id' ? 'menuItemId' : col.name === 'ingredient_id' ? 'ingredientId' : col.name;
+              filterCol = col.name === 'menu_item_id' ? 'menuItemId' : col.name === 'ingredient_id' ? 'ingredientId' : col.name === 'organization_id' ? 'organizationId' : col.name;
             }
             if (valChunk && valChunk.value !== undefined) {
               filterVal = valChunk.value;
