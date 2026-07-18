@@ -890,14 +890,16 @@ app.get('/api/demand-prediction', async (req, res) => {
       const upcomingRsvps = allRsvps.filter(r => String(r.date) === targetDateStr && r.attending === true).length;
       
       // Blend: 40% historical + 60% RSVP
-      const predicted = Math.round((historicalAverage * 0.4) + (upcomingRsvps * 0.6));
+      const rawPredicted = (historicalAverage * 0.4) + (upcomingRsvps * 0.6);
+      const predicted = Math.round(rawPredicted);
       
       results.push({
         day: targetDayName,
         date: targetDateStr,
         historicalAverage,
         upcomingRsvps,
-        predicted
+        predicted,
+        rawPredicted
       });
     }
     
