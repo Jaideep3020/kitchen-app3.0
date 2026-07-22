@@ -1,9 +1,12 @@
+import ScrollAffordance from './ScrollAffordance';
+import { Pressable } from './Pressable';
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useData } from '../contexts/DataContext';
 import { useToast } from '../contexts/ToastContext';
 import { triggerHaptic } from '../lib/haptics';
 import { 
-  Calendar, Clock, Edit3, Save, Sparkles, Plus, Trash2, 
+  Calendar, Clock, Edit3, Save, Sparkles, Plus, Trash2, X,
   CheckCircle, FileText, Utensils, Zap, HelpCircle, Rocket 
 } from 'lucide-react';
 import { MenuItem } from '../types';
@@ -35,7 +38,7 @@ export default function ManagerMenu() {
   const dailyDishes = menuItems.filter(item => item.dayOfWeek === selectedDay);
 
   const startEditing = (item: MenuItem) => {
-    triggerHaptic('light');
+    
     setEditingItem({ ...item });
     
     // Load current recipe rows for this dish from the global recipes state
@@ -73,12 +76,12 @@ export default function ManagerMenu() {
     }
     setMealOptions([...mealOptions, newOption.trim()]);
     setNewOption('');
-    triggerHaptic('light');
+    
   };
 
   const handleRemoveOption = (opt: string) => {
     setMealOptions(mealOptions.filter(o => o !== opt));
-    triggerHaptic('light');
+    
   };
 
   const handleAddTag = () => {
@@ -92,7 +95,7 @@ export default function ManagerMenu() {
       tags: [...editingItem.tags, newTag.trim()]
     });
     setNewTag('');
-    triggerHaptic('light');
+    
   };
 
   const handleRemoveTag = (tag: string) => {
@@ -101,7 +104,7 @@ export default function ManagerMenu() {
       ...editingItem,
       tags: editingItem.tags.filter(t => t !== tag)
     });
-    triggerHaptic('light');
+    
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -200,14 +203,14 @@ export default function ManagerMenu() {
                 const monday = new Date(d.setDate(diff));
                 const mondayStr = monday.toISOString().split('T')[0];
                 setActiveWeekStartDate(mondayStr);
-                triggerHaptic('light');
+                
               }}
               className="bg-transparent text-xs font-bold text-gray-900 dark:text-white outline-none"
             />
           </div>
 
           {/* Publish button */}
-          <button
+          <Pressable
             onClick={async () => {
               triggerHaptic('medium');
               setIsPublishingWeek(true);
@@ -219,16 +222,16 @@ export default function ManagerMenu() {
           >
             <Rocket className="w-4 h-4" />
             {isPublishingWeek ? 'Publishing Week...' : 'Publish Week Schedule'}
-          </button>
+          </Pressable>
         </div>
       </div>
 
       {/* Weekday Selector */}
-      <div className="bg-white dark:bg-[#121212] p-1.5 rounded-2xl border border-gray-100 dark:border-gray-800 flex overflow-x-auto gap-1 shadow-xs no-scrollbar">
+      <ScrollAffordance className="bg-white dark:bg-[#121212] p-1.5 rounded-2xl border border-gray-100 dark:border-gray-800 flex gap-1 shadow-xs" fadeColorClass="from-white dark:from-[#121212]">
         {WEEKDAYS.map(day => (
-          <button
+          <Pressable
             key={day}
-            onClick={() => { triggerHaptic('light'); setSelectedDay(day); setEditingItem(null); }}
+            onClick={() => { setSelectedDay(day); setEditingItem(null); }}
             className={`flex-1 min-w-[90px] text-center py-2.5 rounded-xl text-xs font-bold transition-all ${
               selectedDay === day
                 ? 'bg-[#16321F] text-[#D9E96B] dark:bg-[#D9E96B] dark:text-[#16321F] shadow-sm'
@@ -236,9 +239,9 @@ export default function ManagerMenu() {
             }`}
           >
             {day}
-          </button>
+          </Pressable>
         ))}
-      </div>
+      </ScrollAffordance>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Daily Schedule Display & Editor Container */}
@@ -314,13 +317,13 @@ export default function ManagerMenu() {
                   </div>
 
                   {dish && (
-                    <button
+                    <Pressable
                       onClick={() => startEditing(dish)}
                       className="mt-4 w-full bg-gray-50 hover:bg-[#16321F] hover:text-white dark:bg-gray-800/40 dark:hover:bg-[#D9E96B]/10 dark:hover:text-[#D9E96B] text-gray-600 dark:text-gray-300 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5"
                     >
                       <Edit3 className="w-3.5 h-3.5" />
                       Configure Meal
-                    </button>
+                    </Pressable>
                   )}
                 </div>
               );
@@ -329,25 +332,43 @@ export default function ManagerMenu() {
         </div>
 
         {/* Dynamic Interactive Editor Sidebar */}
-        <div>
-          {editingItem ? (
-            <div className="bg-white dark:bg-[#121212] rounded-2xl border border-[#16321F]/20 dark:border-[#D9E96B]/20 p-6 space-y-5 shadow-sm sticky top-24">
-              <div className="flex items-center justify-between border-b border-gray-50 dark:border-gray-800/50 pb-4">
-                <div>
-                  <h4 className="text-sm font-extrabold text-gray-900 dark:text-white">Configure Meal Settings</h4>
-                  <p className="text-[10px] text-gray-400 uppercase font-bold mt-0.5 tracking-wider">
-                    {editingItem.mealType} • {editingItem.dayOfWeek}
-                  </p>
+        <div className="lg:col-span-1">
+          <AnimatePresence>
+          {editingItem && (
+            <>
+              {/* Mobile overlay background */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 lg:hidden"
+                onClick={() => setEditingItem(null)}
+              />
+              <motion.div 
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                exit={{ y: "100%" }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                className="fixed inset-x-0 bottom-0 z-50 bg-white dark:bg-[#121212] rounded-t-[32px] p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl max-h-[90vh] overflow-y-auto lg:!transform-none lg:static lg:h-auto lg:rounded-2xl lg:border lg:border-[#16321F]/20 dark:lg:border-[#D9E96B]/20 lg:p-6 lg:shadow-sm lg:sticky lg:top-24 flex flex-col space-y-5"
+              >
+                {/* Mobile Drag Handle */}
+                <div className="w-12 h-1.5 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto mb-2 lg:hidden shrink-0" />
+                <div className="flex items-center justify-between border-b border-gray-50 dark:border-gray-800/50 pb-4 shrink-0">
+                  <div>
+                    <h4 className="text-sm font-extrabold text-gray-900 dark:text-white">Configure Meal Settings</h4>
+                    <p className="text-[10px] text-gray-400 uppercase font-bold mt-0.5 tracking-wider">
+                      {editingItem.mealType} • {editingItem.dayOfWeek}
+                    </p>
+                  </div>
+                  <Pressable 
+                    onClick={() => { setEditingItem(null); }}
+                    className="p-1.5 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-full text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-5 h-5" />
+                  </Pressable>
                 </div>
-                <button 
-                  onClick={() => { triggerHaptic('light'); setEditingItem(null); }}
-                  className="p-1.5 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-full text-gray-400 hover:text-gray-600"
-                >
-                  <Trash2 className="w-4 h-4 text-red-500" />
-                </button>
-              </div>
 
-              <form onSubmit={handleSave} className="space-y-4">
+                <form onSubmit={handleSave} className="space-y-4">
                 {/* Name */}
                 <div>
                   <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Dish Name</label>
@@ -404,13 +425,13 @@ export default function ManagerMenu() {
                           className="inline-flex items-center gap-1 text-[10px] font-extrabold bg-[#16321F]/10 dark:bg-[#D9E96B]/10 text-[#16321F] dark:text-[#D9E96B] px-2 py-1 rounded-lg"
                         >
                           {opt}
-                          <button
+                          <Pressable
                             type="button"
                             onClick={() => handleRemoveOption(opt)}
                             className="hover:text-red-500 transition-colors"
                           >
                             <Trash2 className="w-3 h-3" />
-                          </button>
+                          </Pressable>
                         </span>
                       ))}
                     </div>
@@ -428,13 +449,13 @@ export default function ManagerMenu() {
                       onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddOption(); } }}
                       className="flex-1 px-3 py-2 bg-gray-50 dark:bg-[#1a1a1a] border border-gray-100 dark:border-gray-800 focus:border-[#16321F] dark:focus:border-[#D9E96B] rounded-lg text-xs"
                     />
-                    <button
+                    <Pressable
                       type="button"
                       onClick={handleAddOption}
                       className="bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 text-gray-700 dark:text-gray-300 p-2 rounded-lg"
                     >
                       <Plus className="w-4 h-4" />
-                    </button>
+                    </Pressable>
                   </div>
                 </div>
 
@@ -448,13 +469,13 @@ export default function ManagerMenu() {
                         className="inline-flex items-center gap-1 text-[10px] font-bold bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded-md"
                       >
                         {tag}
-                        <button
+                        <Pressable
                           type="button"
                           onClick={() => handleRemoveTag(tag)}
                           className="hover:text-red-500 transition-colors"
                         >
                           &times;
-                        </button>
+                        </Pressable>
                       </span>
                     ))}
                   </div>
@@ -467,13 +488,13 @@ export default function ManagerMenu() {
                       onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddTag(); } }}
                       className="flex-1 px-3 py-2 bg-gray-50 dark:bg-[#1a1a1a] border border-gray-100 dark:border-gray-800 focus:border-[#16321F] dark:focus:border-[#D9E96B] rounded-lg text-xs"
                     />
-                    <button
+                    <Pressable
                       type="button"
                       onClick={handleAddTag}
                       className="bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 text-gray-700 dark:text-gray-300 p-2 rounded-lg"
                     >
                       <Plus className="w-4 h-4" />
-                    </button>
+                    </Pressable>
                   </div>
                 </div>
 
@@ -531,28 +552,28 @@ export default function ManagerMenu() {
                             </div>
                             
                             {/* Delete Button */}
-                            <button
+                            <Pressable
                               type="button"
                               onClick={() => {
-                                triggerHaptic('light');
+                                
                                 setRecipeRows(recipeRows.filter((_, i) => i !== index));
                               }}
                               className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            </Pressable>
                           </div>
                         );
                       })
                     ) : (
-                      <p className="text-[10px] text-gray-400 italic">No ingredients configured. Add some below.</p>
+                      <p className="text-[10px] text-gray-400 italic">No ingredients configured yet. Select items from inventory to build your recipe.</p>
                     )}
                   </div>
                   
-                  <button
+                  <Pressable
                     type="button"
                     onClick={() => {
-                      triggerHaptic('light');
+                      
                       const firstItem = prepItems[0];
                       setRecipeRows([...recipeRows, {
                         ingredientId: firstItem ? firstItem.id : '',
@@ -564,22 +585,25 @@ export default function ManagerMenu() {
                   >
                     <Plus className="w-3.5 h-3.5" />
                     Add Ingredient
-                  </button>
+                  </Pressable>
                 </div>
 
                 {/* Publish changes */}
-                <button
+                <Pressable
                   type="submit"
                   disabled={isSubmitting}
                   className="w-full mt-6 bg-[#16321F] dark:bg-[#D9E96B] text-[#D9E96B] dark:text-[#16321F] hover:bg-[#2C4134] dark:hover:bg-[#EAF5E4] py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer disabled:opacity-50"
                 >
                   <Save className="w-4 h-4" />
                   {isSubmitting ? 'Publishing to DB...' : 'Publish & Sync Menu'}
-                </button>
+                </Pressable>
               </form>
-            </div>
-          ) : (
-            <div className="bg-gray-50/50 dark:bg-gray-900/10 border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-2xl p-8 text-center flex flex-col items-center justify-center h-[350px]">
+            </motion.div>
+            </>
+          )}
+          </AnimatePresence>
+          {!editingItem && (
+            <div className="hidden lg:flex bg-gray-50/50 dark:bg-gray-900/10 border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-2xl p-8 text-center flex-col items-center justify-center h-[350px]">
               <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-3">
                 <Sparkles className="w-5 h-5 text-gray-400" />
               </div>

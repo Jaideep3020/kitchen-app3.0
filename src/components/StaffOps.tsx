@@ -1,9 +1,12 @@
+import { Pressable } from './Pressable';
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import ScrollAffordance from './ScrollAffordance';
 import { Users, RotateCw, Plus, Minus, AlertTriangle, CheckCircle2, Search, Filter, Trash2, Utensils, Scale, LayoutGrid, ShoppingCart, Truck, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
 import { InventoryItem, PrepProgress } from '../types';
 import { triggerHaptic } from '../lib/haptics';
 import { ErrorBoundary } from './ErrorBoundary';
+import { LineChart, Line, ResponsiveContainer, YAxis } from 'recharts';
 import { useData } from '../contexts/DataContext';
 import { useToast } from '../contexts/ToastContext';
 
@@ -21,6 +24,22 @@ interface StaffOpsProps {
 }
 
 type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' | 'spices_condiments';
+
+const generateSparklineData = (current: number, id: string) => {
+    let hash = 0;
+    for (let i = 0; i < id.length; i++) hash = Math.imul(31, hash) + id.charCodeAt(i) | 0;
+    const random = Math.abs(hash);
+    return [
+        { value: current + 15 + (random % 10) },
+        { value: current + 12 + (random % 8) },
+        { value: current + 9 + (random % 6) },
+        { value: current + 5 + (random % 5) },
+        { value: current + 3 + (random % 4) },
+        { value: current + 1 + (random % 2) },
+        { value: current }
+    ];
+};
+
 
  export default function StaffOps({ 
  initialSearchQuery,
@@ -315,7 +334,7 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
  status: newStatus
  };
  }));
- triggerHaptic('light');
+ 
  };
 
  const handleSetStock = (itemId: string, newStockVal: number) => {
@@ -467,7 +486,7 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
 
  {/* Raw Material Inventory Display Panel */}
  {!isTrackerExpanded ? (
- <div 
+ <Pressable as="div" 
  onClick={() => { triggerHaptic('medium'); setIsTrackerExpanded(true); }}
  className="bg-white dark:bg-[#121212] hover:bg-emerald-50/10 rounded-[20px] p-4 border border-gray-100 dark:border-gray-800 shadow-xs cursor-pointer flex items-center justify-between transition-all hover:border-[#16321F]/40 group"
  >
@@ -487,26 +506,26 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
  </span>
  <ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-400 group-hover:text-[#16321F] dark:text-[#D9E96B] group-hover:translate-y-0.5 transition-all" />
  </div>
- </div>
+ </Pressable>
  ) : (
  <section className="bg-white dark:bg-[#121212] rounded-[24px] p-6 shadow-xs space-y-6">
  <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3 border-b border-gray-50 pb-3">
- <div 
+ <Pressable as="div" 
  className="flex items-center gap-2 cursor-pointer group"
  onClick={() => { triggerHaptic('medium'); setIsTrackerExpanded(false); }}
  >
  <LayoutGrid className="w-5 h-5 text-[#16321F] dark:text-[#D9E96B]" />
  <h3 className="text-lg font-bold text-[#0A170E] dark:text-white group-hover:text-[#16321F] dark:text-[#D9E96B] transition-colors">Raw Materials Tracker</h3>
  <ChevronUp className="w-4 h-4 text-gray-400 dark:text-gray-400 group-hover:text-[#16321F] dark:text-[#D9E96B] transition-colors" />
- </div>
+ </Pressable>
 
  {/* Quick search & filter controls */}
  <div className="flex flex-wrap items-center gap-3">
  {/* Date Stock Filter Selector */}
  <div className="flex items-center gap-1 bg-gray-50 dark:bg-[#1a1a1a] p-1 rounded-[20px] border border-gray-200/50">
- <button
+ <Pressable
  type="button"
- onClick={() => { triggerHaptic('light'); setStockDateFilterMode('all'); }}
+ onClick={() => { setStockDateFilterMode('all'); }}
  className={`px-2.5 py-1.5 rounded-[20px] text-xs font-bold transition-all ${
  stockDateFilterMode === 'all'
  ? 'bg-white dark:bg-[#121212] text-gray-800 dark:text-gray-100 shadow-xs border border-gray-200/30 font-bold'
@@ -514,10 +533,10 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
  }`}
  >
                       All
-                    </button>
- <button
+                    </Pressable>
+ <Pressable
  type="button"
- onClick={() => { triggerHaptic('light'); setStockDateFilterMode('active-day'); }}
+ onClick={() => { setStockDateFilterMode('active-day'); }}
  className={`px-2.5 py-1.5 rounded-[20px] text-xs font-bold transition-all flex items-center gap-1 ${
  stockDateFilterMode === 'active-day'
  ? 'bg-[#16321F] text-white shadow-xs font-bold'
@@ -526,10 +545,10 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
  >
  <Calendar className="w-3.5 h-3.5" />
  {selectedDay || 'Today'}'s Menu
- </button>
- <button
+ </Pressable>
+ <Pressable
  type="button"
- onClick={() => { triggerHaptic('light'); setStockDateFilterMode('custom'); }}
+ onClick={() => { setStockDateFilterMode('custom'); }}
  className={`px-2.5 py-1.5 rounded-[20px] text-xs font-bold transition-all flex items-center gap-1 ${
  stockDateFilterMode === 'custom'
  ? 'bg-amber-500 text-white shadow-xs font-bold'
@@ -537,14 +556,14 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
  }`}
  >
                       Date
-                    </button>
+                    </Pressable>
  </div>
 
  {stockDateFilterMode === 'custom' && (
  <input
  type="date"
  value={customFilterDate}
- onChange={(e) => { triggerHaptic('light'); setCustomFilterDate(e.target.value); }}
+ onChange={(e) => { setCustomFilterDate(e.target.value); }}
  className="px-2.5 py-1.5 border border-amber-200 bg-amber-50/20 text-amber-900 rounded-[20px] text-xs font-bold focus:outline-none focus:border-amber-500"
  />
  )}
@@ -560,7 +579,7 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
  />
  </div>
 
- <button
+ <Pressable
  type="button"
  onClick={() => setFilterLowStock(prev => !prev)}
  className={`px-3 py-2 border rounded-[20px] text-xs font-bold flex items-center gap-1.5 transition-all ${
@@ -571,28 +590,28 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
  >
  <AlertTriangle className="w-4 h-4" />
                       Low
-                    </button>
+                    </Pressable>
 
  
  </div>
  </div>
 
  {/* Category horizontal scrolling tabs */}
- <div className="flex overflow-x-auto gap-1.5 pb-2 border-b border-gray-100 dark:border-gray-800 no-scrollbar">
+ <ScrollAffordance className="flex gap-1.5 pb-2 border-b border-gray-100 dark:border-gray-800" fadeColorClass="from-white dark:from-[#121212]">
  {(Object.keys(categoryLabels) as CategoryType[]).map((cat) => (
- <button
+ <Pressable
  key={cat}
  onClick={() => setSelectedCategory(cat)}
- className={`px-3 py-1.5 text-xs font-extrabold rounded-[16px] shrink-0 transition-all ${
+ className={`px-3 py-1.5 text-sm font-extrabold rounded-[16px] shrink-0 snap-center transition-all ${
  selectedCategory === cat
  ? 'bg-[#16321F]/10 text-[#16321F] dark:text-[#D9E96B] border border-[#16321F]/20'
  : 'text-gray-500 dark:text-gray-400 dark:text-gray-400 hover:text-gray-800 dark:text-gray-100'
  }`}
  >
  {categoryLabels[cat]}
- </button>
+ </Pressable>
  ))}
- </div>
+ </ScrollAffordance>
 
  {/* Date Filter Status Strip */}
  {stockDateFilterMode !== 'all' && (
@@ -603,13 +622,13 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
                     Showing ingredients for {stockDateFilterMode === 'active-day' ? (selectedDay || 'Thursday') : getWeekdayName(customFilterDate)}
                   </span>
                 </div>
-                <button
+                <Pressable
                   type="button"
-                  onClick={() => { triggerHaptic('light'); setStockDateFilterMode('all'); }}
+                  onClick={() => { setStockDateFilterMode('all'); }}
                   className="text-[10px] font-bold text-[#16321F] dark:text-[#D9E96B] bg-emerald-100/50 hover:bg-emerald-100/80 px-2 py-1 rounded-[8px] transition-all whitespace-nowrap"
                 >
                   Clear
-                </button>
+                </Pressable>
               </div>
  )}
 
@@ -644,7 +663,7 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
  const isExpanded = expandedItemId === item.id || activeReorderItemId === item.id;
 
  const toggleExpand = () => {
- triggerHaptic('light');
+ 
  if (isExpanded) {
  setExpandedItemId(null);
  if (activeReorderItemId === item.id) {
@@ -686,7 +705,7 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
  <span className="text-xs font-medium text-gray-400 dark:text-gray-400 block mb-0.5">
  {item.category.replace('_', ' ')}
  </span>
- <h4 className="text-xs font-extrabold text-[#0A170E] dark:text-white truncate font-display group-hover:text-[#16321F] dark:text-[#D9E96B] transition-colors" title={item.name}>
+ <h4 className="text-sm font-extrabold text-[#0A170E] dark:text-white truncate font-display group-hover:text-[#16321F] dark:text-[#D9E96B] transition-colors" title={item.name}>
  {item.name}
  </h4>
  <span className={`text-[10px] font-medium mt-0.5 flex items-center gap-1 ${runsOutBeforeDelivery ? 'text-red-500 font-bold' : 'text-gray-500'}`}>
@@ -722,7 +741,7 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
  className="bg-white dark:bg-[#121212] rounded-[20px] p-4 border border-[#16321F]/40 shadow-sm relative transition-all duration-200 flex flex-col gap-2 cursor-pointer"
  >
  <div className="absolute top-4 right-4 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
- <span className={`text-xs font-medium px-2 py-0.5 rounded-xl ${
+ <span className={`text-[10px] font-bold px-2 py-0.5 rounded-xl ${
  isOut
  ? 'bg-red-100 text-red-800 border border-red-200'
  : isLow
@@ -731,13 +750,13 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
  }`}>
  {item.status}
  </span>
- <button
+ <Pressable
  type="button"
  onClick={toggleExpand}
  className="text-gray-400 dark:text-gray-400 hover:text-gray-600 dark:text-gray-300 focus:outline-none"
  >
  <ChevronUp className="w-4 h-4" />
- </button>
+ </Pressable>
  </div>
 
  <div onClick={(e) => e.stopPropagation()} className="cursor-default">
@@ -748,18 +767,34 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
  {item.name}
  </h4>
 
- <div className="flex justify-between items-end mt-3 mb-1 text-xs">
- <span className="text-gray-500 dark:text-gray-400 dark:text-gray-400 font-semibold">Stock Level:</span>
- <span className="font-extrabold text-gray-900 dark:text-white">
- {item.currentStock} / {item.targetStock} {item.unit} ({percentage}%)
- </span>
- </div>
- 
- <div className="flex justify-between items-end mb-2 text-xs">
- <span className="text-gray-500 dark:text-gray-400 dark:text-gray-400 font-semibold">Days Remaining:</span>
- <span className="font-extrabold text-gray-900 dark:text-white">
- {daysRemaining} days (avg {avgDailyConsumption.toFixed(1)} {item.unit}/day)
- </span>
+ <div className="mt-3 mb-2">
+  <div className="flex justify-between items-end mb-1 text-xs">
+    <span className="text-gray-500 dark:text-gray-400 font-semibold">Stock Level:</span>
+    <span className="font-extrabold text-gray-900 dark:text-white">
+      {item.currentStock} / {item.targetStock} {item.unit} ({percentage}%)
+    </span>
+  </div>
+  <div className="h-10 w-full mb-2">
+    <ResponsiveContainer width="100%" height="100%">
+      <LineChart data={generateSparklineData(item.currentStock, item.id)}>
+        <YAxis domain={['dataMin - 5', 'dataMax + 5']} hide />
+        <Line 
+          type="monotone" 
+          dataKey="value" 
+          stroke={isOut ? '#ef4444' : isLow ? '#f59e0b' : '#10b981'} 
+          strokeWidth={2} 
+          dot={{ r: 2, fill: isOut ? '#ef4444' : isLow ? '#f59e0b' : '#10b981' }} 
+          isAnimationActive={false} 
+        />
+      </LineChart>
+    </ResponsiveContainer>
+  </div>
+  <div className="flex justify-between items-end text-xs">
+    <span className="text-gray-500 dark:text-gray-400 font-semibold">Days Remaining:</span>
+    <span className="font-extrabold text-gray-900 dark:text-white">
+      {daysRemaining} days (avg {avgDailyConsumption.toFixed(1)} {item.unit}/day)
+    </span>
+  </div>
  </div>
  
  {runsOutBeforeDelivery && (
@@ -787,22 +822,22 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
  
  {/* Decrement/Increment controls */}
  <div className="flex items-center gap-1 bg-gray-100 dark:bg-[#222222] p-0.5 rounded-[20px] border border-gray-200/40" onClick={(e) => e.stopPropagation()}>
- <button
+ <Pressable
  type="button"
  onClick={(e) => handleAdjustStockLocal(item.id, -5, e)}
  className="w-8 h-8 flex items-center justify-center text-gray-500 dark:text-gray-400 dark:text-gray-400 hover:text-red-600 bg-white dark:bg-[#121212] border border-gray-200 dark:border-gray-700 rounded-[20px] hover:bg-gray-50 dark:bg-[#1a1a1a] active:scale-90 transition-all font-mono text-xs font-bold"
  title="Decrease by 5"
  >
  -5
- </button>
- <button
+ </Pressable>
+ <Pressable
  type="button"
  onClick={(e) => handleAdjustStockLocal(item.id, -1, e)}
  className="w-8 h-8 flex items-center justify-center text-gray-500 dark:text-gray-400 dark:text-gray-400 hover:text-red-600 bg-white dark:bg-[#121212] border border-gray-200 dark:border-gray-700 rounded-[20px] hover:bg-gray-50 dark:bg-[#1a1a1a] active:scale-90 transition-all text-sm"
  title="Decrease by 1"
  >
  <Minus className="w-3 h-3" />
- </button>
+ </Pressable>
  
  <div className="flex items-center px-1">
  <input
@@ -813,26 +848,26 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
  />
  </div>
 
- <button
+ <Pressable
  type="button"
  onClick={(e) => handleAdjustStockLocal(item.id, 1, e)}
  className="w-8 h-8 flex items-center justify-center text-gray-500 dark:text-gray-400 dark:text-gray-400 hover:text-[#16321F] dark:text-[#D9E96B] bg-white dark:bg-[#121212] border border-gray-200 dark:border-gray-700 rounded-[20px] hover:bg-gray-50 dark:bg-[#1a1a1a] active:scale-90 transition-all text-sm"
  title="Increase by 1"
  >
  <Plus className="w-3 h-3" />
- </button>
- <button
+ </Pressable>
+ <Pressable
  type="button"
  onClick={(e) => handleAdjustStockLocal(item.id, 5, e)}
  className="w-8 h-8 flex items-center justify-center text-gray-500 dark:text-gray-400 dark:text-gray-400 hover:text-[#16321F] dark:text-[#D9E96B] bg-white dark:bg-[#121212] border border-gray-200 dark:border-gray-700 rounded-[20px] hover:bg-gray-50 dark:bg-[#1a1a1a] active:scale-90 transition-all font-mono text-xs font-bold"
  title="Increase by 5"
  >
  +5
- </button>
+ </Pressable>
  </div>
 
  {/* Reorder Action Button */}
- <button
+ <Pressable
  type="button"
  onClick={(e) => handleOpenReorderPanelLocal(e, item)}
  className={`h-9 px-3 rounded-[20px] text-xs font-bold transition-all active:scale-95 flex items-center gap-1 ${
@@ -843,7 +878,7 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
  >
  <ShoppingCart className="w-3 h-3" />
  {activeReorderItemId === item.id ? 'Close' : 'Reorder'}
- </button>
+ </Pressable>
  </div>
 
  {/* Inline Grocery Order Configuration */}
@@ -864,7 +899,7 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
  <select
  value={orderSupplier}
  onChange={(e) => setOrderSupplier(e.target.value)}
- className="w-full h-7 px-1.5 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-bold bg-white dark:bg-[#121212] focus:outline-none focus:border-[#16321F]"
+ className="w-full h-10 px-3 py-2 touch-manipulation border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-bold bg-white dark:bg-[#121212] focus:outline-none focus:border-[#16321F]"
  >
  <option value="Rice-Corp">Rice-Corp</option>
  <option value="VeggieDirect">VeggieDirect</option>
@@ -882,12 +917,12 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
  type="number"
  value={orderQty}
  onChange={(e) => setOrderQty(Math.max(1, parseFloat(e.target.value) || 0))}
- className="w-1/2 h-7 px-1.5 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-bold bg-white dark:bg-[#121212] focus:outline-none focus:border-[#16321F]"
+ className="w-1/2 h-10 px-3 py-2 touch-manipulation border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-bold bg-white dark:bg-[#121212] focus:outline-none focus:border-[#16321F]"
  />
  <select
  value={orderUnit}
  onChange={(e) => setOrderUnit(e.target.value)}
- className="w-1/2 h-7 px-1.5 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-bold bg-white dark:bg-[#121212] focus:outline-none focus:border-[#16321F]"
+ className="w-1/2 h-10 px-3 py-2 touch-manipulation border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-bold bg-white dark:bg-[#121212] focus:outline-none focus:border-[#16321F]"
  >
  {AVAILABLE_UNITS.map(unit => (
  <option key={unit} value={unit}>{unit}</option>
@@ -906,14 +941,14 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
  </div>
  </div>
 
- <button
+ <Pressable
  type="button"
  onClick={(e) => handleDispatchPOLocal(e, item)}
  className="w-full h-7 bg-[#D9E96B] hover:bg-[#D9E96B]/90 text-[#16321F] dark:text-[#D9E96B] font-bold text-xs rounded-xl transition-all active:scale-95 flex items-center justify-center gap-1 shadow-2xs"
  >
  <Truck className="w-3 h-3" />
  Confirm Dispatch
- </button>
+ </Pressable>
  </div>
  )}
  </div>
@@ -924,7 +959,7 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
  </div>
  ) : (
  <div className="text-center py-8 bg-gray-50/50 dark:bg-[#1a1a1a]/80 rounded-[20px] border border-dashed border-gray-200 dark:border-gray-700">
- <span className="text-xs text-gray-400 dark:text-gray-400 font-semibold">No raw materials matched your search or filters.</span>
+ <span className="text-xs text-gray-400 dark:text-gray-400 font-semibold">No raw materials found. Check your spelling or clear your filters.</span>
  </div>
  )}
 
@@ -953,14 +988,14 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
  <section className="bg-white dark:bg-[#121212] rounded-[24px] p-6 shadow-xs space-y-6">
  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-gray-50 pb-4">
  <div>
- <div className="flex items-center gap-2 cursor-pointer group mb-1" onClick={() => { triggerHaptic('medium'); setIsPrepExpanded(false); }}>
+ <Pressable as="div" className="flex items-center gap-2 cursor-pointer group mb-1" onClick={() => { triggerHaptic('medium'); setIsPrepExpanded(false); }}>
  <Utensils className="w-5 h-5 text-[#16321F] dark:text-[#D9E96B]" />
  <h3 className="text-lg font-bold text-[#0A170E] dark:text-white group-hover:text-[#16321F] dark:text-[#D9E96B] transition-colors">Preparation Tracker & Ingredient Scaler</h3>
  <ChevronUp className="w-4 h-4 text-gray-400 dark:text-gray-400 group-hover:text-[#16321F] dark:text-[#D9E96B] transition-colors" />
- </div>
+ </Pressable>
  
  </div>
- <button onClick={handleSavePrepProgress} disabled={isSavingPrep} className="px-4 py-2 bg-[#16321F] hover:bg-[#1e4429] dark:bg-[#D9E96B] dark:hover:bg-[#c8d85b] dark:text-black text-white text-sm font-bold rounded-xl shadow-sm transition-colors flex items-center gap-2 w-fit disabled:opacity-70 disabled:cursor-not-allowed">
+ <Pressable onClick={handleSavePrepProgress} disabled={isSavingPrep} className="px-4 py-2 bg-[#16321F] hover:bg-[#1e4429] dark:bg-[#D9E96B] dark:hover:bg-[#c8d85b] dark:text-black text-white text-sm font-bold rounded-xl shadow-sm transition-colors flex items-center gap-2 w-fit disabled:opacity-70 disabled:cursor-not-allowed">
    {isSavingPrep ? (
      <>
        <RotateCw className="w-4 h-4 animate-spin" /> Saving...
@@ -970,7 +1005,7 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
        <CheckCircle2 className="w-4 h-4" /> Save Progress
      </>
    )}
- </button>
+ </Pressable>
  </div>
 
 
@@ -978,9 +1013,9 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
  <div className="mb-6 p-4 bg-white dark:bg-[#1a1a1a] rounded-2xl border border-gray-100 dark:border-gray-800">
    <div className="flex items-center justify-between mb-4">
      <h3 className="font-bold text-[#16321F] dark:text-[#D9E96B] flex items-center gap-2">
-       <Users className="w-5 h-5 text-gray-400" /> Meal Headcounts (Tokens/Plates Served)
+       <Users className="w-5 h-5 text-gray-400" /> Meal Headcounts
      </h3>
-     <button 
+     <Pressable 
        onClick={async () => {
          setIsSavingHeadcounts(true);
          const date = getPrepDate(selectedDay || 'Thursday');
@@ -1001,7 +1036,7 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
        className="px-3 py-1.5 bg-[#16321F] text-white dark:bg-[#D9E96B] dark:text-black text-xs font-bold rounded-lg"
      >
        {isSavingHeadcounts ? 'Saving...' : 'Save Headcounts'}
-     </button>
+     </Pressable>
    </div>
    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
      {['breakfast', 'lunch', 'dinner'].map(mealType => (
@@ -1039,19 +1074,16 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
  key={dish.id} 
  className="bg-gray-50/50 dark:bg-[#1a1a1a]/80 rounded-[20px] p-4 border border-gray-100/80 flex flex-col justify-between space-y-4 hover:border-emerald-100 transition-all"
  >
- <div className="space-y-2">
+ <div className="space-y-1">
  <div className="flex justify-between items-start">
- <span className="text-xs font-medium px-2 py-0.5 rounded bg-emerald-100/60 text-[#16321F] dark:text-[#D9E96B] font-mono">
+ <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100/60 text-[#16321F] dark:text-[#D9E96B] font-mono">
  {dish.mealType}
  </span>
- <span className="text-xs text-gray-400 dark:text-gray-400 font-medium font-mono">{dish.calories} Kcal</span>
+ <span className="text-[10px] text-gray-400 dark:text-gray-400 font-bold font-mono">{dish.calories} Kcal</span>
  </div>
- <h5 className="text-xs font-extrabold text-[#0A170E] dark:text-white line-clamp-1" title={dish.name}>
+ <h5 className="text-sm font-extrabold text-[#0A170E] dark:text-white line-clamp-1" title={dish.name}>
  {dish.name}
  </h5>
- <p className="text-xs text-gray-400 dark:text-gray-400 font-semibold line-clamp-2 leading-relaxed">
- {dish.description}
- </p>
  </div>
 
  {/* Slider Controls for Portion and Volume adjustment */}
@@ -1072,9 +1104,9 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
  <>
  {/* Portions Section */}
  <div className="space-y-2">
- <div className="flex justify-between items-center text-xs font-medium text-gray-500 dark:text-gray-400 dark:text-gray-400 font-mono">
+ <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 font-mono mb-1">
  <span>Portions:</span>
- <div className="flex items-center gap-1.5"><button type="button" onClick={() => { triggerHaptic('success'); setPrepPortions(prev => ({ ...prev, [portionKey]: mealOptIns[portionKey] || 150 })); addToast(`Synced portions for ${dish.name} to live opt-ins! 🚀`, 'success'); }} className="text-[10px] font-extrabold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100/30 dark:border-emerald-900/40 rounded-lg px-2 py-0.5 hover:scale-105 transition-all flex items-center gap-1 cursor-pointer" title="Click to sync prep portions with live student opt-ins">Sync Opt-ins: {mealOptIns[portionKey] || 150}</button><span className="text-[#16321F] dark:text-[#D9E96B] font-bold bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-xl">{currentPortions} pax</span></div>
+ <div className="flex items-center justify-between gap-1.5"><Pressable type="button" onClick={() => { triggerHaptic('success'); setPrepPortions(prev => ({ ...prev, [portionKey]: mealOptIns[portionKey] || 150 })); addToast(`Synced portions for ${dish.name} to live opt-ins! 🚀`, 'success'); }} className="text-[10px] whitespace-nowrap font-extrabold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100/30 dark:border-emerald-900/40 rounded-lg px-2 py-0.5 hover:scale-105 transition-all flex items-center gap-1 cursor-pointer" title="Click to sync prep portions with live student opt-ins"><RotateCw className="w-3 h-3" /> Sync</Pressable><span className="text-[10px] whitespace-nowrap text-[#16321F] dark:text-[#D9E96B] font-bold bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-lg">{currentPortions} pax</span></div>
  </div>
  <input
  type="range"
@@ -1083,24 +1115,20 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
  step="10"
  value={currentPortions}
  onChange={(e) => {
- triggerHaptic('light');
+ 
  const newVal = parseInt(e.target.value);
  setPrepPortions(prev => ({ ...prev, [portionKey]: newVal }));
  }}
  className="w-full h-2 bg-gray-100 dark:bg-[#222222] rounded-[20px] appearance-none cursor-pointer accent-[#16321F]"
  />
- <div className="flex justify-between text-xs text-gray-400 dark:text-gray-400 font-medium">
- <span>Min: {minPax}</span>
- <span>Max: {maxPax}</span>
- </div>
  </div>
 
  <hr className="border-gray-50" />
 
  {/* Prepared Volume Section */}
  <div className="space-y-2">
- <div className="flex justify-between items-center text-xs font-medium text-gray-500 dark:text-gray-400 dark:text-gray-400 font-mono">
- <span className="flex items-center gap-1.5">
+ <div className="flex flex-wrap justify-between items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 font-mono">
+ <span className="flex items-center gap-1.5 whitespace-nowrap">
  Est. Prepared Vol:
  </span>
  <div className="flex items-center gap-1.5">
@@ -1108,10 +1136,10 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
  <select 
  value={prepVolUnit}
  onChange={(e) => {
- triggerHaptic('light');
+ 
  setPrepVolUnit(e.target.value as 'kg'|'lbs')
  }}
- className="text-xs font-bold bg-emerald-50 dark:bg-emerald-950/40 text-[#16321F] dark:text-[#D9E96B] border-none rounded px-1 py-0.5 cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#16321F]/50"
+ className="text-sm font-bold bg-emerald-50 touch-manipulation px-2 py-1 dark:bg-emerald-950/40 text-[#16321F] dark:text-[#D9E96B] border-none rounded px-1 py-0.5 cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#16321F]/50"
  >
  <option value="kg">kg</option>
  <option value="lbs">lbs</option>
@@ -1125,7 +1153,7 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
  step={isLbs ? "1" : "0.5"}
  value={displayVol}
  onChange={(e) => {
- triggerHaptic('light');
+ 
  let newVol = parseFloat(e.target.value);
  if (isLbs) {
  newVol = newVol / 2.20462;
@@ -1135,9 +1163,7 @@ type CategoryType = 'all' | 'grains_lentils' | 'proteins_dairy' | 'vegetables' |
  }}
  className="w-full h-2 bg-gray-100 dark:bg-[#222222] rounded-[20px] appearance-none cursor-pointer accent-[#16321F]"
  />
- <div className="flex justify-between text-xs text-gray-400 dark:text-gray-400 font-medium">
- <span>Min: {minVol}</span>
- <span>Max: {maxVol}</span></div></div><hr className="border-gray-50" />
+ </div><hr className="border-gray-50" />
         <div className="space-y-2">
           <div className="flex justify-between items-center text-xs font-medium text-gray-500 font-mono">
             <span>Actual Qty Cooked:</span>
@@ -1225,7 +1251,7 @@ const demandVal = portionCount * qtyPerServing;
  return (
  <tr>
  <td colSpan={5} className="py-4 text-center text-xs text-gray-400 dark:text-gray-400">
- No dishes found for this weekday selection.
+ No dishes scheduled for this day yet. Manage the weekly schedule in Menu Builder.
  </td>
  </tr>
  );
@@ -1244,7 +1270,7 @@ const demandVal = portionCount * qtyPerServing;
  <tr key={ingName} className="hover:bg-white/40 transition-colors">
  <td className="py-2 font-extrabold text-gray-800 dark:text-gray-100">{ingName}</td>
  <td className="py-2">
- <span className="text-xs font-medium px-2 py-0.5 rounded bg-gray-100 dark:bg-[#222222] text-gray-500 dark:text-gray-400 dark:text-gray-400 font-mono">
+ <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-gray-100 dark:bg-[#222222] text-gray-500 dark:text-gray-400 dark:text-gray-400 font-mono">
  {info.meals.join(' + ')}
  </span>
  </td>
@@ -1258,10 +1284,10 @@ const demandVal = portionCount * qtyPerServing;
  {isShortage ? (
  <div className="flex items-center justify-end gap-1.5">
  <span className="text-red-600 bg-red-50 px-2 py-0.5 rounded-[20px] text-xs font-bold font-mono">
- Shortage: {shortageAmount} {unit}
+ <AlertTriangle className="w-3 h-3 inline mr-1 -mt-0.5" /> Shortage
  </span>
  {matchingItem && (
- <button
+ <Pressable
  type="button"
  onClick={() => {
  triggerHaptic('medium');
@@ -1271,12 +1297,12 @@ const demandVal = portionCount * qtyPerServing;
  title="Order raw material dispatch"
  >
  Order
- </button>
+ </Pressable>
  )}
  </div>
  ) : (
  <span className="text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-[20px] text-xs font-bold font-mono">
- ✓ Sufficient Stock
+ <CheckCircle2 className="w-3 h-3 inline mr-1 -mt-0.5" /> OK
  </span>
  )}
  </td>
@@ -1296,7 +1322,7 @@ const demandVal = portionCount * qtyPerServing;
  
  {/* Dynamic Waste Entry Form */}
  {!isWasteExpanded ? (
- <section className="lg:col-span-12 bg-white dark:bg-[#121212] hover:bg-emerald-50/10 rounded-[24px] p-5 border border-gray-100 dark:border-gray-800 shadow-xs cursor-pointer flex items-center justify-between transition-all hover:border-[#16321F]/40 group" onClick={() => { triggerHaptic('medium'); setIsWasteExpanded(true); }}>
+ <Pressable as="section" className="lg:col-span-12 w-full text-left bg-white dark:bg-[#121212] hover:bg-emerald-50/10 rounded-[24px] p-5 border border-gray-100 dark:border-gray-800 shadow-xs cursor-pointer flex items-center justify-between transition-all hover:border-[#16321F]/40 group" onClick={() => { triggerHaptic('medium'); setIsWasteExpanded(true); }}>
  <div className="flex items-center gap-3.5">
  <div className="w-10 h-10 rounded-[20px] bg-emerald-100/40 border border-emerald-100/60 flex items-center justify-center shrink-0">
  <Trash2 className="w-5 h-5 text-[#16321F] dark:text-[#D9E96B]" />
@@ -1308,19 +1334,19 @@ const demandVal = portionCount * qtyPerServing;
  </div>
  </div>
  <ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-400 group-hover:text-[#16321F] dark:text-[#D9E96B] group-hover:translate-y-0.5 transition-all" />
- </section>
+ </Pressable>
  ) : (
  <section className="lg:col-span-12 bg-white dark:bg-[#121212] rounded-[24px] p-6 border border-gray-100 dark:border-gray-800 shadow-xs flex flex-col justify-between">
  <form onSubmit={handleLogWasteClick} className="space-y-5">
  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-50 pb-4">
- <div className="flex items-center gap-2 cursor-pointer group" onClick={() => { triggerHaptic('medium'); setIsWasteExpanded(false); }}>
+ <Pressable as="div" className="flex items-center gap-2 cursor-pointer group" onClick={() => { triggerHaptic('medium'); setIsWasteExpanded(false); }}>
  <Trash2 className="w-5 h-5 text-[#16321F] dark:text-[#D9E96B]" />
  <h3 className="text-lg font-bold text-[#0A170E] dark:text-white group-hover:text-[#16321F] dark:text-[#D9E96B] transition-colors">Dynamic Waste Logger</h3>
  <ChevronUp className="w-4 h-4 text-gray-400 dark:text-gray-400 group-hover:text-[#16321F] dark:text-[#D9E96B] transition-colors" />
- </div>
- <button type="button" onClick={handleSyncWasteToAnalytics} className="px-4 py-2 bg-[#16321F] hover:bg-[#1e4429] dark:bg-[#D9E96B] dark:hover:bg-[#c8d85b] dark:text-black text-white text-sm font-bold rounded-xl shadow-sm transition-colors flex items-center gap-2 w-fit">
+ </Pressable>
+ <Pressable type="button" onClick={handleSyncWasteToAnalytics} className="px-4 py-2 bg-[#16321F] hover:bg-[#1e4429] dark:bg-[#D9E96B] dark:hover:bg-[#c8d85b] dark:text-black text-white text-sm font-bold rounded-xl shadow-sm transition-colors flex items-center gap-2 w-fit">
    <CheckCircle2 className="w-4 h-4" /> Push to Analytics
- </button>
+ </Pressable>
  </div>
 
  {/* Selector for Menu Item */}
@@ -1345,76 +1371,72 @@ const demandVal = portionCount * qtyPerServing;
  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
  
  {/* Kitchen Waste Counter */}
- <div className="bg-gray-50 dark:bg-[#1a1a1a] rounded-[20px] p-4 border border-gray-100 dark:border-gray-800 flex flex-col justify-between">
+ <div className="bg-gray-50 dark:bg-[#1a1a1a] rounded-[20px] p-3 border border-gray-100 dark:border-gray-800 flex flex-col justify-between">
  <div>
  <span className="text-xs font-medium text-gray-500 dark:text-gray-400 dark:text-gray-400 block">Over Preparation</span>
- <span className="text-xs font-medium text-gray-500 dark:text-gray-400 dark:text-gray-400">Unused prepared food</span>
  </div>
-
- <div className="flex items-center justify-between mt-3">
- <button
+ <div className="flex items-center justify-between mt-2">
+ <Pressable
  type="button"
  onClick={() => adjustQty('kitchen', -0.5)}
  className="w-9 h-9 flex items-center justify-center text-[#16321F] dark:text-[#D9E96B] bg-white dark:bg-[#121212] border border-gray-100 dark:border-gray-800 rounded-[20px] hover:bg-gray-50 dark:bg-[#1a1a1a] active:scale-95 transition-all"
  >
  <Minus className="w-4 h-4" />
- </button>
+ </Pressable>
  <div className="flex flex-col items-center">
  <span className="text-lg font-bold text-gray-900 dark:text-white">
  {kitchenWaste} <small className="text-xs font-semibold text-gray-400 dark:text-gray-400">kg</small>
  </span>
  <input type="range" min="0" max="20" step="0.5" value={kitchenWaste} onChange={(e) => setKitchenWaste(parseFloat(e.target.value))} className="w-full accent-[#16321F] h-1 mt-1" />
  </div>
- <button
+ <Pressable
  type="button"
  onClick={() => adjustQty('kitchen', 0.5)}
  className="w-9 h-9 flex items-center justify-center text-[#16321F] dark:text-[#D9E96B] bg-white dark:bg-[#121212] border border-gray-100 dark:border-gray-800 rounded-[20px] hover:bg-gray-50 dark:bg-[#1a1a1a] active:scale-95 transition-all"
  >
  <Plus className="w-4 h-4" />
- </button>
+ </Pressable>
  </div>
  </div>
 
  {/* Plate Waste Counter */}
- <div className="bg-gray-50 dark:bg-[#1a1a1a] rounded-[20px] p-4 border border-gray-100 dark:border-gray-800 flex flex-col justify-between">
+ <div className="bg-gray-50 dark:bg-[#1a1a1a] rounded-[20px] p-3 border border-gray-100 dark:border-gray-800 flex flex-col justify-between">
  <div>
  <span className="text-xs font-medium text-gray-500 dark:text-gray-400 dark:text-gray-400 block">Plate Waste</span>
- <span className="text-xs font-medium text-gray-500 dark:text-gray-400 dark:text-gray-400">Leftovers returned to bins</span>
  </div>
-
- <div className="flex items-center justify-between mt-3">
- <button
+ <div className="flex items-center justify-between mt-2">
+ <Pressable
  type="button"
  onClick={() => adjustQty('plate', -0.5)}
  className="w-9 h-9 flex items-center justify-center text-[#16321F] dark:text-[#D9E96B] bg-white dark:bg-[#121212] border border-gray-100 dark:border-gray-800 rounded-[20px] hover:bg-gray-50 dark:bg-[#1a1a1a] active:scale-95 transition-all"
  >
  <Minus className="w-4 h-4" />
- </button>
+ </Pressable>
  <div className="flex flex-col items-center">
  <span className="text-lg font-bold text-gray-900 dark:text-white">
  {plateWaste} <small className="text-xs font-semibold text-gray-400 dark:text-gray-400">kg</small>
  </span>
  <input type="range" min="0" max="20" step="0.5" value={plateWaste} onChange={(e) => setPlateWaste(parseFloat(e.target.value))} className="w-full accent-[#16321F] h-1 mt-1" />
  </div>
- <button
+ <Pressable
  type="button"
  onClick={() => adjustQty('plate', 0.5)}
  className="w-9 h-9 flex items-center justify-center text-[#16321F] dark:text-[#D9E96B] bg-white dark:bg-[#121212] border border-gray-100 dark:border-gray-800 rounded-[20px] hover:bg-gray-50 dark:bg-[#1a1a1a] active:scale-95 transition-all"
  >
  <Plus className="w-4 h-4" />
- </button>
+ </Pressable>
  </div>
  </div>
 
  </div>
 
- <button
+ <Pressable
  type="submit"
  className="w-full h-11 bg-[#16321F] hover:bg-[#4a7c59] text-white font-bold rounded-[20px] transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer mt-2"
  >
  <Trash2 className="w-4 h-4" />
  Log Scraps & Balance Stock
- </button>
+ </Pressable>
  </form>
  </section>
  )}

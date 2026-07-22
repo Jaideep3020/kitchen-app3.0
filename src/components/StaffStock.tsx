@@ -1,10 +1,12 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { reportIssue, updateSupplier } from '../api';
 import { triggerHaptic } from '../lib/haptics';
+import { Pressable } from './Pressable';
 import React, { useState } from 'react';
+import FocusTrap from 'focus-trap-react';
 import { useData } from '../contexts/DataContext';
 import { useToast } from '../contexts/ToastContext';
-import { Truck, Check, Plus, ShoppingCart, Eye, EyeOff, AlertCircle, Search, ChevronDown, ChevronUp, Maximize2, Minimize2, MapPin, Package, Clock, FileText, Camera, X, PhoneCall, Mail } from 'lucide-react';
+import { MoreVertical, Truck, Check, Plus, ShoppingCart, Eye, EyeOff, AlertCircle, Search, ChevronDown, ChevronUp, Maximize2, Minimize2, MapPin, Package, Clock, FileText, Camera, X, PhoneCall, Mail } from 'lucide-react';
 import { Supplier, ActiveOrder } from '../types';
 import { motion, useAnimation, PanInfo, AnimatePresence } from 'motion/react';
 
@@ -100,13 +102,13 @@ const SwipeableSupplierCard = ({ supplier, hasOutStock, isReordering, isExpanded
                       <div>
                         <div className="flex justify-between items-start mb-0.5">
                           <span className="font-bold text-gray-900 dark:text-white">{c.type}</span>
-                          <span className="text-[10px] text-gray-500">{c.date}</span>
+                          <span className="text-[10px] text-gray-500 font-mono">{c.date}</span>
                         </div>
                         <p className="text-gray-600 dark:text-gray-400">{c.notes}</p>
                       </div>
                     </div>
                   )) : (
-                    <p className="text-xs text-gray-500 italic">No correspondence logged yet.</p>
+                    <p className="text-xs text-gray-500 italic">No correspondence logged. Track emails and calls here to maintain a record.</p>
                   )}
                 </div>
                 
@@ -135,7 +137,7 @@ const SwipeableSupplierCard = ({ supplier, hasOutStock, isReordering, isExpanded
                       }
                     }}
                   />
-                  <button 
+                  <Pressable 
                     onClick={(e) => {
                       e.preventDefault();
                       if (newNote.trim() && onAddCorrespondence) {
@@ -147,7 +149,7 @@ const SwipeableSupplierCard = ({ supplier, hasOutStock, isReordering, isExpanded
                     className="bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-500 px-3 py-1.5 rounded-lg text-xs font-bold disabled:opacity-50"
                   >
                     Add
-                  </button>
+                  </Pressable>
                 </div>
               </div>
 
@@ -167,19 +169,19 @@ const SwipeableSupplierCard = ({ supplier, hasOutStock, isReordering, isExpanded
         </div>
         
         <div className="flex items-center gap-2 shrink-0 relative z-20">
-          <button onClick={(e) => { e.stopPropagation(); toggleDetails(supplier.id); }} className="px-3 py-1.5 bg-gray-100 dark:bg-[#222] hover:bg-gray-200 text-gray-700 dark:text-gray-300 text-xs font-bold rounded-full transition-colors flex items-center gap-1 cursor-pointer">
+          <Pressable glowColor="gray" onClick={(e) => { e.stopPropagation(); toggleDetails(supplier.id); }} className="px-3 py-1.5 bg-gray-100 dark:bg-[#222] hover:bg-gray-200 text-gray-700 dark:text-gray-300 text-xs font-bold rounded-full transition-colors flex items-center gap-1 cursor-pointer">
             {isExpanded ? <Minimize2 className="w-3.5 h-3.5"/> : <Maximize2 className="w-3.5 h-3.5" />}
             {isExpanded ? 'Collapse' : 'Catalog'}
-          </button>
+          </Pressable>
           {supplier.attentionNeeded && (
-            <button
+            <Pressable
               onClick={(e) => { e.stopPropagation(); handleReorderClick(supplier.id); }}
               disabled={isReordering}
               className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer ${isReordering ? 'bg-[#16321F] text-white animate-pulse' : 'bg-[#16321F] text-white hover:bg-[#4a7c59]'}`}
             >
               <ShoppingCart className="w-3.5 h-3.5" />
               {isReordering ? 'Sent ✔' : 'Reorder'}
-            </button>
+            </Pressable>
           )}
         </div>
       </motion.div>
@@ -226,7 +228,8 @@ export default function StaffStock({ initialTab, initialSearchQuery, suppliers, 
   React.useEffect(() => { if (initialSearchQuery) setSearchQuery(initialSearchQuery); }, [initialSearchQuery]);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [expandedDetails, setExpandedDetails] = useState<{ [key: string]: boolean }>({});
-  
+  const [poMenuOpen, setPoMenuOpen] = useState(false);
+
   const toggleDetails = (supplierId: string) => {
     setExpandedDetails(prev => ({ ...prev, [supplierId]: !prev[supplierId] }));
   };
@@ -426,22 +429,22 @@ export default function StaffStock({ initialTab, initialSearchQuery, suppliers, 
 
       <div className="flex justify-between items-end border-b border-gray-100 dark:border-gray-800 mb-4">
         <div className="flex gap-6">
-        <button 
+        <Pressable 
           onClick={() => setActiveTab('suppliers')} 
           className={`pb-2 text-sm font-bold transition-colors ${activeTab === 'suppliers' ? 'border-b-2 border-[#16321F] dark:border-[#D9E96B] text-[#16321F] dark:text-[#D9E96B]' : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
         >
           Supplier Directory
-        </button>
-        <button 
+        </Pressable>
+        <Pressable 
           onClick={() => setActiveTab('orders')} 
           className={`pb-2 text-sm font-bold transition-colors ${activeTab === 'orders' ? 'border-b-2 border-[#16321F] dark:border-[#D9E96B] text-[#16321F] dark:text-[#D9E96B]' : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
         >
           Purchase Orders
-        </button>
+        </Pressable>
         </div>
-        <button onClick={() => setShowIssueModal(true)} className="mb-2 px-3 py-1.5 text-xs font-bold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-500 rounded-lg flex items-center gap-1 hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors">
+        <Pressable onClick={() => setShowIssueModal(true)} className="mb-2 px-3 py-1.5 text-xs font-bold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-500 rounded-lg flex items-center gap-1 hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors">
           <AlertCircle className="w-4 h-4" /> Report Issue
-        </button>
+        </Pressable>
       </div>
 
       {activeTab === 'suppliers' && (
@@ -471,9 +474,9 @@ export default function StaffStock({ initialTab, initialSearchQuery, suppliers, 
                 </select>
                 <ChevronDown className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
-              <button onClick={() => setShowNewSupplierModal(true)} className="p-2 bg-[#16321F] text-white rounded-full hover:opacity-90 flex-shrink-0 transition-opacity">
+              <Pressable onClick={() => setShowNewSupplierModal(true)} className="p-2 bg-[#16321F] text-white rounded-full hover:opacity-90 flex-shrink-0 transition-opacity">
                 <Plus className="w-4 h-4" />
-              </button>
+              </Pressable>
             </div>
           </div>
 
@@ -541,7 +544,7 @@ export default function StaffStock({ initialTab, initialSearchQuery, suppliers, 
             {filteredSuppliers.length === 0 && (
               <div className="py-12 flex flex-col items-center justify-center text-center">
                 <Search className="w-8 h-8 text-gray-300 mb-2" />
-                <p className="text-sm text-gray-500">No suppliers match your search.</p>
+                <p className="text-sm text-gray-500">No suppliers found matching your search. Try adjusting the name or add a new supplier.</p>
               </div>
             )}
           </motion.div>
@@ -556,12 +559,12 @@ export default function StaffStock({ initialTab, initialSearchQuery, suppliers, 
               <h3 className="text-lg font-bold text-gray-900 dark:text-white">Order Board</h3>
               <p className="text-xs text-gray-500">Drag and drop to update status</p>
             </div>
-            <button onClick={() => { setShowPOModal(true); setPoStep(1); }} className="bg-[#16321F] text-[#D9E96B] px-4 py-2 rounded-full text-xs font-bold flex items-center gap-1.5 hover:opacity-90">
+            <Pressable onClick={() => { setShowPOModal(true); setPoStep(1); }} className="bg-[#16321F] text-[#D9E96B] px-4 py-2 rounded-full text-xs font-bold flex items-center gap-1.5 hover:opacity-90">
               <Plus className="w-4 h-4" /> Create PO
-            </button>
+            </Pressable>
           </div>
 
-          <div className="flex gap-4 overflow-x-auto pb-4 snap-x">
+          <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory touch-pan-x">
             {['Draft', 'Placed', 'In Transit', 'Received'].map((status) => (
               <div 
                 key={status} 
@@ -727,6 +730,7 @@ export default function StaffStock({ initialTab, initialSearchQuery, suppliers, 
       {/* New PO Drawer */}
       <AnimatePresence>
       {showPOModal && (
+        <FocusTrap>
         <>
           <motion.div 
             initial={{ opacity: 0 }}
@@ -747,9 +751,9 @@ export default function StaffStock({ initialTab, initialSearchQuery, suppliers, 
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">Draft Purchase Order</h3>
                 <p className="text-xs text-gray-500 mt-1">Step {poStep} of 2</p>
               </div>
-              <button onClick={() => setShowPOModal(false)} className="p-2 bg-gray-100 dark:bg-[#222] rounded-full hover:bg-gray-200 dark:hover:bg-[#333] transition-colors">
+              <Pressable onClick={() => setShowPOModal(false)} className="p-2 bg-gray-100 dark:bg-[#222] rounded-full hover:bg-gray-200 dark:hover:bg-[#333] transition-colors">
                 <Plus className="w-5 h-5 rotate-45 text-gray-500" />
-              </button>
+              </Pressable>
             </div>
             
             <div className="flex-grow overflow-y-auto p-4 md:p-6 space-y-6">
@@ -879,43 +883,66 @@ export default function StaffStock({ initialTab, initialSearchQuery, suppliers, 
             <div className="p-4 md:p-6 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-[#121212] flex gap-3 shrink-0">
               {poStep === 1 ? (
                 <>
-                  <button onClick={() => setShowPOModal(false)} className="flex-1 py-3 text-sm font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-[#222] hover:bg-gray-200 dark:hover:bg-[#333] rounded-[16px] transition-colors">
+                  <Pressable onClick={() => setShowPOModal(false)} className="flex-1 py-3 text-sm font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-[#222] hover:bg-gray-200 dark:hover:bg-[#333] rounded-[16px] transition-colors">
                     Cancel
-                  </button>
-                  <button 
+                  </Pressable>
+                  <Pressable 
                     onClick={() => setPoStep(2)} 
                     disabled={!poData.supplierId || !poData.item}
                     className="flex-1 py-3 text-sm font-bold text-white bg-[#16321F] hover:bg-[#1e4429] dark:text-black dark:bg-[#D9E96B] dark:hover:bg-[#c8d85b] rounded-[16px] transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Next Step
-                  </button>
+                  </Pressable>
                 </>
               ) : (
                 <>
-                  <button onClick={() => setPoStep(1)} className="flex-1 py-3 text-sm font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-[#222] hover:bg-gray-200 dark:hover:bg-[#333] rounded-[16px] transition-colors">
-                    Back
-                  </button>
-                  <button onClick={() => handleSavePO('Draft')} className="flex-1 py-3 text-sm font-bold text-[#16321F] dark:text-[#D9E96B] border-2 border-[#16321F]/20 dark:border-[#D9E96B]/20 hover:bg-[#16321F]/5 dark:hover:bg-[#D9E96B]/5 rounded-[16px] transition-colors">
-                    Save Draft
-                  </button>
-                  <button onClick={() => handleSavePO('Placed')} className="flex-1 py-3 text-sm font-bold text-white bg-[#16321F] hover:bg-[#1e4429] dark:text-black dark:bg-[#D9E96B] dark:hover:bg-[#c8d85b] rounded-[16px] transition-colors shadow-sm">
+                  <Pressable onClick={() => setPoStep(1)} className="text-sm font-bold text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 transition-colors flex items-center pr-2">
+                    <ChevronDown className="w-4 h-4 rotate-90 mr-0.5" /> Back
+                  </Pressable>
+                  <div className="flex-1"></div>
+                  <div className="relative">
+                    <Pressable 
+                      onClick={() => setPoMenuOpen(!poMenuOpen)} 
+                      className="h-[48px] w-[48px] flex items-center justify-center text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-[#222] hover:bg-gray-200 dark:hover:bg-[#333] rounded-[16px] transition-colors"
+                      aria-label="More options"
+                    >
+                      <MoreVertical className="w-5 h-5" />
+                    </Pressable>
+                    {poMenuOpen && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setPoMenuOpen(false)}></div>
+                        <div className="absolute bottom-full right-0 mb-2 w-48 bg-white dark:bg-[#2a2a2a] rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden z-50 animate-fade-in origin-bottom-right">
+                          <Pressable 
+                            onClick={() => { handleSavePO('Draft'); setPoMenuOpen(false); }} 
+                            className="w-full text-left px-4 py-3 text-sm font-bold text-[#16321F] dark:text-[#D9E96B] hover:bg-gray-50 dark:hover:bg-[#333] transition-colors"
+                          >
+                            Save as Draft
+                          </Pressable>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  {/* Consolidated secondary actions per audit (surface action, not just data) */}
+                  <Pressable onClick={() => handleSavePO('Placed')} className="px-6 h-[48px] text-sm font-bold text-white bg-[#16321F] hover:bg-[#1e4429] dark:text-black dark:bg-[#D9E96B] dark:hover:bg-[#c8d85b] rounded-[16px] transition-colors shadow-sm">
                     Place Order
-                  </button>
+                  </Pressable>
                 </>
               )}
             </div>
           </motion.div>
         </>
+        </FocusTrap>
       )}
       </AnimatePresence>
 
       {/* Report Issue Modal */}
       {showIssueModal && (
+        <FocusTrap>
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
            <div className="bg-white dark:bg-[#121212] rounded-[24px] w-full max-w-md p-6 shadow-2xl relative my-8 animate-in fade-in zoom-in-95 duration-200">
-             <button onClick={() => setShowIssueModal(false)} className="absolute top-4 right-4 p-2 bg-gray-100 dark:bg-[#222] rounded-full hover:bg-gray-200 transition-colors">
+             <Pressable onClick={() => setShowIssueModal(false)} className="absolute top-4 right-4 p-2 bg-gray-100 dark:bg-[#222] rounded-full hover:bg-gray-200 transition-colors">
                <X className="w-4 h-4" />
-             </button>
+             </Pressable>
              <h3 className="text-lg font-bold mb-1 flex items-center gap-2"><AlertCircle className="w-5 h-5 text-amber-500"/> Report Stock Issue</h3>
              <p className="text-xs text-gray-500 mb-4">Log a discrepancy, damage, or quality issue with stock.</p>
              
@@ -931,7 +958,7 @@ export default function StaffStock({ initialTab, initialSearchQuery, suppliers, 
              }} className="space-y-4">
                <div>
                  <label className="block text-xs font-bold text-gray-500 mb-1">Issue Category</label>
-                 <select name="type" className="w-full bg-gray-50 dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                 <select name="type" className="touch-manipulation min-h-[44px] w-full bg-gray-50 dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500">
                    <option value="Damage">Damage</option>
                    <option value="Missing Quantity">Missing Quantity</option>
                    <option value="Quality">Poor Quality / Spoilage</option>
@@ -964,23 +991,25 @@ export default function StaffStock({ initialTab, initialSearchQuery, suppliers, 
                     </label>
                  </div>
                </div>
-               <button disabled={isSubmittingIssue} type="submit" className="w-full bg-amber-500 text-white py-3 rounded-xl font-bold text-sm hover:bg-amber-600 transition-colors mt-2 disabled:opacity-50">
+               <Pressable disabled={isSubmittingIssue} type="submit" className="w-full bg-amber-500 text-white py-3 rounded-xl font-bold text-sm hover:bg-amber-600 transition-colors mt-2 disabled:opacity-50">
                  {isSubmittingIssue ? 'Submitting...' : 'Submit Issue'}
-               </button>
+               </Pressable>
              </form>
            </div>
         </div>
+        </FocusTrap>
       )}
 
       {/* New Supplier Modal */}
       
       {/* Inventory Update Modal */}
       {droppedOrder && (
+        <FocusTrap>
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
            <div className="bg-white dark:bg-[#121212] rounded-[24px] w-full max-w-md p-6 shadow-2xl relative my-8 animate-in fade-in zoom-in-95 duration-200">
-             <button onClick={() => setDroppedOrder(null)} className="absolute top-4 right-4 p-2 bg-gray-100 dark:bg-[#222] rounded-full hover:bg-gray-200 transition-colors">
+             <Pressable onClick={() => setDroppedOrder(null)} className="absolute top-4 right-4 p-2 bg-gray-100 dark:bg-[#222] rounded-full hover:bg-gray-200 transition-colors">
                <X className="w-4 h-4" />
-             </button>
+             </Pressable>
              <h3 className="text-lg font-bold mb-1 flex items-center gap-2"><Package className="w-5 h-5 text-emerald-500"/> Update Inventory</h3>
              <p className="text-xs text-gray-500 mb-4">Confirm quantity received to update inventory.</p>
              
@@ -1005,7 +1034,7 @@ export default function StaffStock({ initialTab, initialSearchQuery, suppliers, 
                    <input type="number" defaultValue={droppedOrder.quantity} className="w-full bg-gray-50 dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500" />
                 </div>
                 
-                <button 
+                <Pressable 
                   onClick={() => {
                     const updatedOrders = orders.map(o => o.id === droppedOrder.id ? { ...o, status: 'Received' as any } : o);
                     setOrders(updatedOrders);
@@ -1016,19 +1045,21 @@ export default function StaffStock({ initialTab, initialSearchQuery, suppliers, 
                   className="w-full bg-[#16321F] text-[#D9E96B] dark:text-[#D9E96B] dark:bg-[#16321F] hover:opacity-90 py-3 rounded-xl font-bold text-sm transition-colors mt-2"
                 >
                   Confirm & Update
-                </button>
+                </Pressable>
              </div>
            </div>
         </div>
+        </FocusTrap>
       )}
 \n      {showNewSupplierModal && (
+        <FocusTrap>
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-[#121212] rounded-[24px] p-6 w-full max-w-md border border-gray-100 dark:border-gray-800 shadow-2xl">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white">Add New Supplier</h3>
-              <button onClick={() => setShowNewSupplierModal(false)} className="text-gray-400 hover:text-gray-600">
+              <Pressable onClick={() => setShowNewSupplierModal(false)} className="text-gray-400 hover:text-gray-600">
                 <Plus className="w-5 h-5 rotate-45" />
-              </button>
+              </Pressable>
             </div>
             <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
               <div>
@@ -1051,11 +1082,12 @@ export default function StaffStock({ initialTab, initialSearchQuery, suppliers, 
               </div>
             </div>
             <div className="flex gap-3 mt-6 pt-4 border-t border-gray-100">
-              <button onClick={() => setShowNewSupplierModal(false)} className="flex-1 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-[12px]">Cancel</button>
-              <button onClick={handleSaveSupplier} className="flex-1 py-2 text-sm font-bold text-white bg-[#16321F] rounded-[12px]">Save Supplier</button>
+              <Pressable onClick={() => setShowNewSupplierModal(false)} className="flex-1 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-[12px]">Cancel</Pressable>
+              <Pressable onClick={handleSaveSupplier} className="flex-1 py-2 text-sm font-bold text-white bg-[#16321F] rounded-[12px]">Save Supplier</Pressable>
             </div>
           </div>
         </div>
+        </FocusTrap>
       )}
     </div>
   );

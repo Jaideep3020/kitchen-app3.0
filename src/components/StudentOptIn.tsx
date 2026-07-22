@@ -1,4 +1,8 @@
+import { Pressable } from './Pressable';
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import FocusTrap from 'focus-trap-react';
+import ScrollAffordance from './ScrollAffordance';
 import { 
   Calendar, Flame, AlertCircle, CheckCircle2, 
   ChevronRight, ListCollapse, Utensils, Sparkles, 
@@ -29,7 +33,7 @@ export default function StudentOptIn({
  activeDay,
  onActiveDayChange
 }: StudentOptInProps) {
- const { setMealOptIns, sharedConfig, prepItems, recipes } = useData();
+ const { setMealOptIns, sharedConfig, prepItems, recipes, activeWeekStartDate, currentUserEmail } = useData();
  const getDishIngredients = (dishId: string): string[] => {
    if (!recipes || !prepItems) return [];
    return recipes
@@ -47,6 +51,7 @@ export default function StudentOptIn({
  const [issueDish, setIssueDish] = useState<MenuItem | null>(null);
  const [photoBase64, setPhotoBase64] = useState<string>('');
  const [isSubmittingIssue, setIsSubmittingIssue] = useState(false);
+ const [showIssueDetails, setShowIssueDetails] = useState(false);
 
  const DAY_MAP: { [key: string]: number } = {
  'Sunday': 0,
@@ -152,7 +157,7 @@ export default function StudentOptIn({
     }));
 
     triggerHaptic('success');
-    addToast(isCurrentlyOptedIn ? `Opted out of ${dish.name}` : `Opted into ${dish.name}`, isCurrentlyOptedIn ? 'default' : 'success');
+    addToast(isCurrentlyOptedIn ? `Opted out of ${dish.name}` : `Opted into ${dish.name}`, isCurrentlyOptedIn ? 'info' : 'success');
 
     // Calculate actual date based on activeWeekStartDate and dish.dayOfWeek
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -292,18 +297,18 @@ export default function StudentOptIn({
  </div>
 
  {/* 7-Day Smooth Horizon Slider */}
- <div className="bg-white/80 backdrop-blur-md p-2 rounded-[24px] border border-gray-100 flex overflow-x-auto gap-2 no-scrollbar">
+ <ScrollAffordance className="bg-white/80 backdrop-blur-md p-2 rounded-[24px] border border-gray-100 flex gap-2" fadeColorClass="from-white dark:from-[#121212]">
  {days.map((day) => {
  const isActive = selectedDay === day;
  const dayDishIds = menuItems.filter(d => d.dayOfWeek === day).map(d => d.id);
  const activeCountOnDay = dayDishIds.filter(id => studentChoices[id]).length;
 
  return (
- <button
+ <Pressable
  key={day}
  type="button"
  onClick={() => handleDaySwitch(day)}
- className={`w-16 h-16 rounded-full font-bold transition-all flex flex-col items-center justify-center shrink-0 ${
+ className={`w-16 h-16 rounded-full font-bold transition-all flex flex-col items-center justify-center shrink-0 snap-center ${
                 isActive
                   ? 'bg-[#16321F] text-white shadow-sm scale-105'
                   : 'bg-transparent text-gray-500 hover:bg-gray-100'
@@ -320,10 +325,10 @@ export default function StudentOptIn({
  ) : (
  <span className="text-xs font-medium text-gray-400 mt-1.5">No meal</span>
  )}
- </button>
+ </Pressable>
  );
  })}
- </div>
+ </ScrollAffordance>
 
  {/* Staples Alert Strip */}
  <div className="bg-gradient-to-r from-emerald-50/60 to-teal-50/60 rounded-[24px] border border-emerald-100/60 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs">
@@ -417,7 +422,7 @@ export default function StudentOptIn({
              const selectedOption = studentChoices[choiceKey] || getDishOptions(breakfastDish)![0];
              const isSelected = selectedOption === opt;
              return (
-               <button
+               <Pressable
                  key={opt}
                  type="button"
                  onClick={async () => {
@@ -426,7 +431,7 @@ export default function StudentOptIn({
                    setStudentChoices(nextChoices);
                    onConfirm(nextChoices);
                    addToast(`Selected ${opt} for ${breakfastDish.name}! 🍳`, 'success');
-                   triggerHaptic('light');
+                   
                    
                    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
                    const dateObj = new Date(activeWeekStartDate);
@@ -448,7 +453,7 @@ export default function StudentOptIn({
                      });
                    } catch (e) { console.error(e); }
                  }}
-                 className="flex-1 py-1 px-1.5 rounded-lg text-xs font-bold transition-all text-center border cursor-pointer active:scale-95"
+                 className="flex-1 py-1 px-1.5 min-h-[44px] rounded-lg text-xs font-bold transition-all text-center border cursor-pointer active:scale-95"
                  style={{
                    backgroundColor: isSelected ? '#16321F' : '#ffffff',
                    color: isSelected ? '#ffffff' : '#4b5563',
@@ -456,7 +461,7 @@ export default function StudentOptIn({
                  }}
                >
                  {opt === 'Boiled Egg' ? '🥚 Egg' : opt === 'Paneer' ? '🧀 Paneer' : opt === 'Fruit' ? '🍎 Fruit' : opt}
-               </button>
+               </Pressable>
              );
            })}
          </div>
@@ -469,20 +474,21 @@ export default function StudentOptIn({
            <Flame className="w-3 h-3 text-[#16321F]" />
            {breakfastDish.calories} kcal
          </span>
-         <button
+         <Pressable
            type="button"
            onClick={() => {
              setIssueDish(breakfastDish);
              setPhotoBase64('');
+             setShowIssueDetails(false);
            }}
            className="mt-2 text-[11px] font-extrabold text-amber-600 hover:text-amber-700 flex items-center gap-1 cursor-pointer w-fit transition-colors"
          >
            <AlertCircle className="w-3.5 h-3.5" />
            Report Quality
-         </button>
+         </Pressable>
        </div>
 
-       <button
+       <Pressable
          disabled={lockStatus.locked}
          onClick={() => handleToggle(breakfastDish.id)}
          className={`px-4 h-10 rounded-[20px] text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ${
@@ -504,7 +510,7 @@ export default function StudentOptIn({
              {studentChoices[breakfastDish.id] ? 'Booked' : 'Opt In'}
            </>
          )}
-       </button>
+       </Pressable>
      </div>
    </div>
  </div>
@@ -558,7 +564,7 @@ export default function StudentOptIn({
              const selectedOption = studentChoices[choiceKey] || getDishOptions(lunchDish)![0];
              const isSelected = selectedOption === opt;
              return (
-               <button
+               <Pressable
                  key={opt}
                  type="button"
                  onClick={async () => {
@@ -567,7 +573,7 @@ export default function StudentOptIn({
                    setStudentChoices(nextChoices);
                    onConfirm(nextChoices);
                    addToast(`Selected ${opt} for ${lunchDish.name}! 🍳`, 'success');
-                   triggerHaptic('light');
+                   
                    
                    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
                    const dateObj = new Date(activeWeekStartDate);
@@ -589,7 +595,7 @@ export default function StudentOptIn({
                      });
                    } catch (e) { console.error(e); }
                  }}
-                 className="flex-1 py-1 px-1.5 rounded-lg text-xs font-bold transition-all text-center border cursor-pointer active:scale-95"
+                 className="flex-1 py-1 px-1.5 min-h-[44px] rounded-lg text-xs font-bold transition-all text-center border cursor-pointer active:scale-95"
                  style={{
                    backgroundColor: isSelected ? '#16321F' : '#ffffff',
                    color: isSelected ? '#ffffff' : '#4b5563',
@@ -597,7 +603,7 @@ export default function StudentOptIn({
                  }}
                >
                  {opt === 'Chicken Curry' ? '🍗 Chicken' : opt === 'Paneer Masala' ? '🧀 Paneer' : opt}
-               </button>
+               </Pressable>
              );
            })}
          </div>
@@ -610,20 +616,21 @@ export default function StudentOptIn({
            <Flame className="w-3 h-3 text-[#16321F]" />
            {lunchDish.calories} kcal
          </span>
-         <button
+         <Pressable
            type="button"
            onClick={() => {
              setIssueDish(lunchDish);
              setPhotoBase64('');
+             setShowIssueDetails(false);
            }}
            className="mt-2 text-[11px] font-extrabold text-amber-600 hover:text-amber-700 flex items-center gap-1 cursor-pointer w-fit transition-colors"
          >
            <AlertCircle className="w-3.5 h-3.5" />
            Report Quality
-         </button>
+         </Pressable>
        </div>
 
-       <button
+       <Pressable
          disabled={lockStatus.locked}
          onClick={() => handleToggle(lunchDish.id)}
          className={`px-4 h-10 rounded-[20px] text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ${
@@ -645,7 +652,7 @@ export default function StudentOptIn({
              {studentChoices[lunchDish.id] ? 'Booked' : 'Opt In'}
            </>
          )}
-       </button>
+       </Pressable>
      </div>
    </div>
  </div>
@@ -699,7 +706,7 @@ export default function StudentOptIn({
              const selectedOption = studentChoices[choiceKey] || getDishOptions(dinnerDish)![0];
              const isSelected = selectedOption === opt;
              return (
-               <button
+               <Pressable
                  key={opt}
                  type="button"
                  onClick={async () => {
@@ -708,7 +715,7 @@ export default function StudentOptIn({
                    setStudentChoices(nextChoices);
                    onConfirm(nextChoices);
                    addToast(`Selected ${opt} for ${dinnerDish.name}! 🍳`, 'success');
-                   triggerHaptic('light');
+                   
                    
                    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
                    const dateObj = new Date(activeWeekStartDate);
@@ -730,7 +737,7 @@ export default function StudentOptIn({
                      });
                    } catch (e) { console.error(e); }
                  }}
-                 className="flex-1 py-1 px-1.5 rounded-lg text-xs font-bold transition-all text-center border cursor-pointer active:scale-95"
+                 className="flex-1 py-1 px-1.5 min-h-[44px] rounded-lg text-xs font-bold transition-all text-center border cursor-pointer active:scale-95"
                  style={{
                    backgroundColor: isSelected ? '#16321F' : '#ffffff',
                    color: isSelected ? '#ffffff' : '#4b5563',
@@ -738,7 +745,7 @@ export default function StudentOptIn({
                  }}
                >
                  {opt === 'Boiled Egg' ? '🥚 Egg' : opt === 'Paneer' ? '🧀 Paneer' : opt}
-               </button>
+               </Pressable>
              );
            })}
          </div>
@@ -751,20 +758,21 @@ export default function StudentOptIn({
            <Flame className="w-3 h-3 text-[#16321F]" />
            {dinnerDish.calories} kcal
          </span>
-         <button
+         <Pressable
            type="button"
            onClick={() => {
              setIssueDish(dinnerDish);
              setPhotoBase64('');
+             setShowIssueDetails(false);
            }}
            className="mt-2 text-[11px] font-extrabold text-amber-600 hover:text-amber-700 flex items-center gap-1 cursor-pointer w-fit transition-colors"
          >
            <AlertCircle className="w-3.5 h-3.5" />
            Report Quality
-         </button>
+         </Pressable>
        </div>
 
-       <button
+       <Pressable
          disabled={lockStatus.locked}
          onClick={() => handleToggle(dinnerDish.id)}
          className={`px-4 h-10 rounded-[20px] text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ${
@@ -786,7 +794,7 @@ export default function StudentOptIn({
              {studentChoices[dinnerDish.id] ? 'Booked' : 'Opt In'}
            </>
          )}
-       </button>
+       </Pressable>
      </div>
    </div>
  </div>
@@ -820,131 +828,167 @@ export default function StudentOptIn({
  )}
 
   {/* Quality Complaint Modal */}
-  {issueDish && (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
-      <div className="bg-white dark:bg-[#121212] rounded-[24px] w-full max-w-md p-6 shadow-2xl relative my-8 border border-gray-100 animate-scaleUp text-left">
-        <button 
-          onClick={() => setIssueDish(null)} 
-          className="absolute top-4 right-4 p-2 bg-gray-100 dark:bg-[#222] rounded-full hover:bg-gray-200 dark:hover:bg-[#333] transition-colors cursor-pointer"
+  <AnimatePresence>
+    {issueDish && (
+      <FocusTrap>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto"
+      >
+        <motion.div
+          initial={{ opacity: 0, y: 100, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 100, scale: 0.95 }}
+          transition={{ type: "spring", stiffness: 300, damping: 25 }}
+          className="bg-white dark:bg-[#121212] rounded-t-[32px] md:rounded-b-[32px] md:rounded-[24px] w-full max-w-md p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:pb-6 shadow-2xl relative mt-auto md:my-8 border border-gray-100 dark:border-gray-800 text-left"
         >
-          <X className="w-4 h-4 text-gray-500" />
-        </button>
-        <h3 className="text-lg font-bold mb-1 flex items-center gap-2 text-amber-600">
-          <AlertCircle className="w-5 h-5" />
-          Food Quality Complaint
-        </h3>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-          Submit quality feedback or complaints directly to the mess managers for <strong className="text-gray-800 dark:text-gray-200">{issueDish.name}</strong>.
-        </p>
-        
-        <form onSubmit={async (e) => {
-          e.preventDefault();
-          setIsSubmittingIssue(true);
-          try {
-            const formData = new FormData(e.currentTarget);
-            const category = formData.get('category') as string;
-            const description = formData.get('description') as string;
-            
-            const payload = {
-              type: 'Food Quality',
-              itemName: issueDish.name,
-              category: category,
-              description: description,
-              photoBase64: photoBase64 || null,
-              status: 'Open'
-            };
-
-            const res = await fetch('/api/issues', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload)
-            });
-
-            if (res.ok) {
-              addToast(`Complaint submitted successfully! Management will inspect the quality of ${issueDish.name}.`, 'success');
-              setIssueDish(null);
-              setPhotoBase64('');
-            } else {
-              addToast('Failed to submit quality report.', 'error');
-            }
-          } catch (err) {
-            console.error(err);
-            addToast('Error submitting feedback.', 'error');
-          } finally {
-            setIsSubmittingIssue(false);
-          }
-        }} className="space-y-4 text-left">
-          <div>
-            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Feedback Category</label>
-            <select name="category" className="w-full bg-gray-50 dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500">
-              <option value="Taste / Quality">Taste / Cooking Quality</option>
-              <option value="Under-cooked / Raw">Under-cooked / Raw</option>
-              <option value="Cold Temperature">Cold Temperature / Stale</option>
-              <option value="Hygiene Concern">Hygiene Concern</option>
-              <option value="Foreign Object">Foreign Object Found</option>
-              <option value="Other">Other Feedback</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Details & Description</label>
-            <textarea 
-              required 
-              name="description" 
-              rows={3} 
-              placeholder="Describe the quality issue in detail (e.g. tasteless, too salty, cold, etc.)" 
-              className="w-full bg-gray-50 dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
-            ></textarea>
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Photo Evidence (Optional)</label>
-            <div className="flex items-center justify-center w-full">
-              <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl cursor-pointer bg-gray-50 dark:bg-[#1a1a1a] hover:bg-gray-100 dark:hover:bg-[#222] transition-colors">
-                <div className="flex flex-col items-center justify-center pt-3 pb-3">
-                  <Camera className="w-5 h-5 text-gray-400 mb-1" />
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                    {photoBase64 ? '✓ Image uploaded' : 'Click to upload photo evidence'}
-                  </p>
-                </div>
-                <input 
-                  type="file" 
-                  className="hidden" 
-                  accept="image/*" 
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      const reader = new FileReader();
-                      reader.onloadend = () => {
-                        setPhotoBase64(reader.result as string);
-                        addToast('Photo loaded successfully!', 'success');
-                      };
-                      reader.readAsDataURL(file);
-                    }
-                  }} 
-                />
-              </label>
-            </div>
-          </div>
-          <button 
-            type="submit" 
-            disabled={isSubmittingIssue}
-            className="w-full bg-[#16321F] dark:bg-emerald-950 text-white py-2.5 rounded-xl font-bold text-sm hover:bg-[#22442C] transition-colors disabled:opacity-50 cursor-pointer"
+          {/* Mobile Drag Handle */}
+          <div className="w-12 h-1.5 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto mb-6 md:hidden"></div>
+          <Pressable 
+            onClick={() => { setIssueDish(null); setShowIssueDetails(false); }} 
+            className="absolute top-4 right-4 p-2 bg-gray-100 dark:bg-[#222] rounded-full hover:bg-gray-200 dark:hover:bg-[#333] transition-colors cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center"
+            aria-label="Cancel complaint"
           >
-            {isSubmittingIssue ? 'Submitting...' : 'Submit Quality Complaint'}
-          </button>
-        </form>
-      </div>
-    </div>
-  )}
+            <X className="w-4 h-4 text-gray-500" />
+          </Pressable>
+          <h3 className="text-lg font-bold mb-1 flex items-center gap-2 text-amber-600">
+            <AlertCircle className="w-5 h-5" />
+            Food Quality Complaint
+          </h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+            Submit quality feedback directly to the mess managers for <strong className="text-gray-800 dark:text-gray-200">{issueDish.name}</strong>.
+          </p>
+          
+          <form onSubmit={async (e) => {
+            e.preventDefault();
+            setIsSubmittingIssue(true);
+            try {
+              const formData = new FormData(e.currentTarget);
+              const category = formData.get('category') as string || 'Other';
+              const description = formData.get('description') as string;
+              
+              const payload = {
+                type: 'Food Quality',
+                itemName: issueDish.name,
+                category: category,
+                description: description,
+                photoBase64: photoBase64 || null,
+                status: 'Open'
+              };
+
+              const res = await fetch('/api/issues', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+              });
+
+              if (res.ok) {
+                triggerHaptic('success');
+                addToast('Complaint submitted', 'success');
+                setIssueDish(null);
+                setPhotoBase64('');
+                setShowIssueDetails(false);
+              } else {
+                triggerHaptic('error');
+                addToast('Failed to submit quality report.', 'error');
+              }
+            } catch (err) {
+              console.error(err);
+              triggerHaptic('error');
+              addToast('Error submitting feedback.', 'error');
+            } finally {
+              setIsSubmittingIssue(false);
+            }
+          }} className="space-y-4 text-left">
+            <div>
+              <label htmlFor="description" className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Issue Description</label>
+              <textarea 
+                required 
+                id="description"
+                name="description" 
+                rows={3} 
+                className="w-full bg-gray-50 dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              ></textarea>
+            </div>
+
+            {!showIssueDetails ? (
+              <Pressable
+                type="button"
+                onClick={() => setShowIssueDetails(true)}
+                className="text-xs font-bold text-emerald-600 dark:text-emerald-500 hover:text-emerald-700 dark:hover:text-emerald-400 flex items-center gap-1 transition-colors"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+                Add optional details (photo, category)
+              </Pressable>
+            ) : (
+              <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                <div>
+                  <label htmlFor="category" className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Feedback Category (Optional)</label>
+                  <select id="category" name="category" className="touch-manipulation min-h-[44px] w-full bg-gray-50 dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                    <option value="Taste / Quality">Taste / Cooking Quality</option>
+                    <option value="Under-cooked / Raw">Under-cooked / Raw</option>
+                    <option value="Cold Temperature">Cold Temperature / Stale</option>
+                    <option value="Hygiene Concern">Hygiene Concern</option>
+                    <option value="Foreign Object">Foreign Object Found</option>
+                    <option value="Other">Other Feedback</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Photo Evidence (Optional)</label>
+                  <div className="flex items-center justify-center w-full">
+                    <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl cursor-pointer bg-gray-50 dark:bg-[#1a1a1a] hover:bg-gray-100 dark:hover:bg-[#222] transition-colors">
+                      <div className="flex flex-col items-center justify-center pt-3 pb-3">
+                        <Camera className="w-5 h-5 text-gray-400 mb-1" />
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                          {photoBase64 ? '✓ Image uploaded' : 'Click to upload photo evidence'}
+                        </p>
+                      </div>
+                      <input 
+                        type="file" 
+                        className="hidden" 
+                        accept="image/*" 
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              setPhotoBase64(reader.result as string);
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }} 
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <Pressable 
+              type="submit" 
+              disabled={isSubmittingIssue}
+              className="w-full bg-[#16321F] dark:bg-[#D9E96B] text-white dark:text-[#16321F] py-3 rounded-[16px] font-bold text-sm hover:bg-[#22442C] dark:hover:bg-[#c8d85b] transition-colors disabled:opacity-50 cursor-pointer shadow-sm mt-2"
+            >
+              {isSubmittingIssue ? 'Submitting...' : 'Submit complaint'}
+            </Pressable>
+          </form>
+        </motion.div>
+      </motion.div>
+      </FocusTrap>
+    )}
+  </AnimatePresence>
 
   {/* Confirm Button */}
 <div className="fixed bottom-20 left-0 w-full px-4 md:relative md:bottom-auto md:mt-8 z-30 flex justify-center md:justify-end">
- <button
+ <Pressable
  style={{ cursor: 'default' }}
  className="bg-[#16321F] text-[#D9E96B] font-bold px-8 rounded-[20px] h-[56px] shadow-sm flex items-center justify-center gap-2 w-full md:w-auto text-base border border-emerald-400/20"
  >
  <Check className="w-5 h-5 text-emerald-400 bg-white/10 rounded-full p-0.5 animate-pulse" />
  All choices are instantly saved & synced!
- </button>
+ </Pressable>
  </div>
 
  </div>

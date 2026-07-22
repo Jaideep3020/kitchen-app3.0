@@ -1,4 +1,7 @@
+import { Pressable } from './Pressable';
 import React, { useState, useEffect, useMemo } from 'react';
+import FocusTrap from 'focus-trap-react';
+import { createPortal } from 'react-dom';
 import { useToast } from '../contexts/ToastContext';
 import { useData } from '../contexts/DataContext';
 import { useDashboardMetrics } from '../hooks/useDashboardMetrics';
@@ -83,7 +86,7 @@ export default function StaffDashboard({
     studentChoices, mealOptIns,
     suppliers,
     sharedConfig,
-    updateSharedConfig,
+    
 
     currentUserEmail
   } = useData();
@@ -220,6 +223,11 @@ return () => clearTimeout(timer);
     return prepProgress.find((p: any) => p.day === day);
   }, [prepProgress, day]);
 
+  const activeShiftPrepped = useMemo(() => {
+    if (!activeShiftDish || !todayPrep) return 0;
+    return todayPrep.portions?.[activeShiftDish.id] || 0;
+  }, [activeShiftDish, todayPrep]);
+
   const mealsBreakdown = useMemo(() => {
     return (['breakfast', 'lunch', 'dinner'] as const).map(mealType => {
       const dish = menuItems.find(item => item.dayOfWeek === day && item.mealType === mealType);
@@ -264,40 +272,6 @@ return () => clearTimeout(timer);
           <div className="h-14 w-full bg-gray-50 dark:bg-[#1a1a1a] rounded-lg border border-gray-100 dark:border-gray-700"></div>
         </div>
       </div>
-
-      {/* Skeleton Analysis Card */}
-      <div className="bg-white dark:bg-[#121212] rounded-2xl p-5 border border-gray-100 dark:border-gray-700 col-span-full animate-skeleton-pulse">
-        <div className="flex items-center justify-between mb-6">
-          <div className="h-4 w-32 bg-gray-200 dark:bg-[#222] rounded"></div>
-          <div className="h-4 w-16 bg-gray-200 dark:bg-[#222] rounded"></div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="flex flex-col items-center justify-center py-4">
-             <div className="h-28 w-28 rounded-full border-[12px] border-gray-100 dark:border-[#222] mb-4 relative flex items-center justify-center">
-               <div className="h-6 w-12 bg-gray-200 dark:bg-[#333] rounded"></div>
-             </div>
-             <div className="h-3 w-32 bg-gray-200 dark:bg-[#222] rounded"></div>
-          </div>
-          <div className="flex flex-col justify-center space-y-6">
-             <div className="space-y-2">
-               <div className="flex justify-between"><div className="h-3 w-24 bg-gray-200 dark:bg-[#222] rounded"></div><div className="h-3 w-12 bg-gray-200 dark:bg-[#222] rounded"></div></div>
-               <div className="h-3 w-full bg-gray-100 dark:bg-[#1a1a1a] rounded-full"></div>
-             </div>
-             <div className="space-y-2">
-               <div className="flex justify-between"><div className="h-3 w-24 bg-gray-200 dark:bg-[#222] rounded"></div><div className="h-3 w-12 bg-gray-200 dark:bg-[#222] rounded"></div></div>
-               <div className="h-3 w-full bg-gray-100 dark:bg-[#1a1a1a] rounded-full"></div>
-             </div>
-          </div>
-        </div>
-        <div className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-700">
-          <div className="h-3 w-40 bg-gray-200 dark:bg-[#222] rounded mb-6"></div>
-          <div className="w-full h-48 bg-gray-50 dark:bg-[#1a1a1a] rounded-lg border border-gray-100 dark:border-gray-700 flex items-end justify-around px-4 pb-4 pt-8 gap-2">
-            {[40, 70, 45, 90, 60].map((h, i) => (
-              <div key={i} className="w-12 bg-gray-200 dark:bg-[#222] rounded-t-sm" style={{height: h + '%'}}></div>
-            ))}
-          </div>
-        </div>
-      </div>
     </div>
   );
  }
@@ -307,7 +281,7 @@ return () => clearTimeout(timer);
 
 
   const handleKeypadPress = (key: string | number) => {
-    triggerHaptic('light');
+    
     if (showKeypad === 'amount') {
       if (key === 'del') {
         setAmountInput(prev => prev.slice(0, -1));
@@ -338,9 +312,9 @@ return () => clearTimeout(timer);
   <div className={`grid grid-cols-3 transition-all duration-300 gap-2 sm:gap-3`}>
   {/* Patrons Card */}
   <ErrorBoundary fallbackMessage="Failed to load diners metric.">
-  <div 
-    onClick={() => { triggerHaptic('medium'); setShowModal('diners'); }}
-    className="bg-white dark:bg-[#121212] rounded-2xl p-2 sm:p-2.5 border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center text-center group hover:border-[#16321F]/20 hover:shadow-md hover:scale-[1.02] active:scale-95 transition-all shadow-sm h-full cursor-pointer"
+  <Pressable 
+    onClick={() => setShowModal('diners')}
+    className="bg-white dark:bg-[#121212] rounded-2xl p-2 sm:p-2.5 border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center text-center group hover:border-[#16321F]/20 hover:shadow-md hover:scale-[1.02] transition-all shadow-sm h-full cursor-pointer outline-none focus:outline-none"
     title="Click to view breakdown for all meals today"
   >
     <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-[#16321F] dark:text-[#D9E96B] flex items-center justify-center border border-emerald-100 dark:border-emerald-900/40 mb-1 group-hover:scale-105 transition-all">
@@ -351,7 +325,7 @@ return () => clearTimeout(timer);
     <div className="text-[8px] sm:text-[9px] text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100/50 dark:border-emerald-900/40 rounded-full px-1.5 py-0.5 font-bold whitespace-nowrap">
       {studentActiveShiftRSVP ? `+1 Yours Active` : `+12 RSVP'd`}
     </div>
-  </div>
+  </Pressable>
   </ErrorBoundary>
 
   {/* Target Prep Card */}
@@ -361,7 +335,7 @@ return () => clearTimeout(timer);
      <ChefHat className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
     </div>
     <span className="text-[9px] sm:text-[10px] font-semibold text-gray-400 dark:text-gray-300 block font-mono uppercase tracking-wider mb-0.5">Portions Prepared</span>
-    <div className="text-base sm:text-xl font-black text-gray-900 dark:text-white font-display leading-none mb-1.5">120 / {activeShiftOptIns}</div>
+    <div className="text-base sm:text-xl font-black text-gray-900 dark:text-white font-display leading-none mb-1.5">{activeShiftPrepped} / {activeShiftOptIns}</div>
     <span className="text-[8px] sm:text-[9px] text-teal-700 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/30 rounded-full px-1.5 py-0.5 font-bold whitespace-nowrap">
       Cooked
     </span>
@@ -387,94 +361,38 @@ return () => clearTimeout(timer);
 
   {/* Quick Actions Bar */}
   <div className="grid grid-cols-4 gap-2 mb-3">
-  <button
+  <Pressable
     type="button"
-    onClick={() => { triggerHaptic('light'); setShowModal('delivery'); }}
+    onClick={() => { setShowModal('delivery'); }}
     className="bg-[#16321F] dark:bg-emerald-900 text-white rounded-xl p-2 flex flex-col items-center justify-center gap-1 font-bold text-[9px] shadow-sm hover:bg-[#2C4134] transition-colors text-center leading-tight"
   >
     <Truck className="w-4 h-4" />
     Receive<br/>Delivery
-  </button>
-  <button
+  </Pressable>
+  <Pressable
     type="button"
-    onClick={() => { triggerHaptic('light'); setShowModal('leftovers'); }}
+    onClick={() => { setShowModal('leftovers'); }}
     className="bg-white dark:bg-[#222222] text-[#16321F] dark:text-white border border-gray-200 dark:border-gray-700 rounded-xl p-2 flex flex-col items-center justify-center gap-1 font-bold text-[9px] shadow-sm hover:bg-gray-50 transition-colors text-center leading-tight"
   >
     <Trash2 className="w-4 h-4 text-rose-500" />
     Log<br/>Leftovers
-  </button>
-  <button
+  </Pressable>
+  <Pressable
     type="button"
-    onClick={() => { triggerHaptic('light'); if (onNavigate) onNavigate('ops'); }}
+    onClick={() => { if (onNavigate) { window.scrollTo(0,0); onNavigate('ops'); } }}
     className="bg-white dark:bg-[#222222] text-[#16321F] dark:text-white border border-gray-200 dark:border-gray-700 rounded-xl p-2 flex flex-col items-center justify-center gap-1 font-bold text-[9px] shadow-sm hover:bg-gray-50 transition-colors text-center leading-tight"
   >
     <ClipboardList className="w-4 h-4 text-amber-500" />
     Check<br/>Pantry
-  </button>
-  <button
+  </Pressable>
+  <Pressable
     type="button"
-    onClick={() => { triggerHaptic('light'); setShowModal('issue'); }}
+    onClick={() => { setShowModal('issue'); }}
     className="bg-white dark:bg-[#222222] text-[#16321F] dark:text-white border border-gray-200 dark:border-gray-700 rounded-xl p-2 flex flex-col items-center justify-center gap-1 font-bold text-[9px] shadow-sm hover:bg-gray-50 transition-colors text-center leading-tight"
   >
     <AlertCircle className="w-4 h-4 text-gray-500 dark:text-gray-400 dark:text-gray-300" />
     Report<br/>Issue
-  </button>
- </div>
-
- 
-  {/* Daily Analysis Card */}
- <div className="bg-white dark:bg-[#121212] rounded-2xl p-5 shadow-xs border border-gray-100 dark:border-gray-700 col-span-full">
-   <div className="flex items-center justify-between mb-4">
-     <h3 className="text-sm font-extrabold text-[#0A170E] dark:text-white font-display flex items-center gap-2">
-       <BarChart2 className="w-4 h-4 text-emerald-500"/> Today's Analysis
-     </h3>
-     <div className="flex gap-1.5 items-center">
-        <span className="text-[10px] font-bold text-gray-400 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">{dateStr}</span>
-      </div>
-   </div>
-   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-     <div>
-       <div className="flex justify-between text-xs mb-1 font-bold text-gray-600 dark:text-gray-300">
-         <span>Total Prep Goal (kg)</span>
-         <span>{totalPrepKgs.toFixed(1)} kg</span>
-       </div>
-       <div className="w-full h-3 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-         <div className="h-full bg-emerald-500 rounded-full" style={{ width: '100%' }}></div>
-       </div>
-     </div>
-     <div>
-       <div className="flex justify-between text-xs mb-1 font-bold text-gray-600 dark:text-gray-300">
-         <span>Total Waste Logged (kg)</span>
-         <span className="text-rose-500">{totalWaste.toFixed(1)} kg</span>
-       </div>
-       <div className="w-full h-3 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-         <div className="h-full bg-rose-500 rounded-full" style={{ width: `${Math.min(100, wastePercentage)}%` }}></div>
-       </div>
-     </div>
-   </div>
-   {dashboardChartData.length > 0 && (
-     <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-700">
-       <h4 className="text-xs font-bold text-gray-500 dark:text-gray-400 dark:text-gray-300 mb-4">Waste Breakdown by Item (Top 5)</h4>
-       <ErrorBoundary fallbackMessage="Failed to load waste chart.">
-         <div className="w-full h-48">
-           <ResponsiveContainer width="100%" height="100%">
-             <BarChart data={dashboardChartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-               <XAxis dataKey="name" tick={{fontSize: 10, fill: '#888'}} axisLine={false} tickLine={false} />
-               <YAxis tick={{fontSize: 10, fill: '#888'}} axisLine={false} tickLine={false} />
-               <Tooltip 
-                 cursor={{fill: 'rgba(0,0,0,0.05)'}} 
-                 contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', fontSize: '12px'}}
-               />
-               <Legend wrapperStyle={{fontSize: '10px'}} />
-               <Bar dataKey="consumed" name="Consumed (kg)" stackId="a" fill="#10B981" radius={[0, 0, 0, 0]} />
-               <Bar dataKey="overPrep" name="Over-Prep (kg)" stackId="a" fill="#D9E96B" radius={[0, 0, 0, 0]} />
-               <Bar dataKey="plateWaste" name="Plate Waste (kg)" stackId="a" fill="#F43F5E" radius={[4, 4, 0, 0]} />
-             </BarChart>
-           </ResponsiveContainer>
-         </div>
-       </ErrorBoundary>
-     </div>
-   )}
+  </Pressable>
  </div>
 
   {/* Live Student Opt-ins Breakdown Card */}
@@ -547,7 +465,7 @@ return () => clearTimeout(timer);
           <div 
             className="flex items-center justify-between p-3 rounded-lg border border-rose-200 bg-rose-50/50 dark:border-rose-900/50 dark:bg-rose-950/20 cursor-pointer hover:bg-rose-100/50 transition-colors" 
             onClick={() => { 
-              triggerHaptic('light'); 
+              
               const matchedSupplier = suppliers?.find(s => 
                 s.items?.some(i => i.name.toLowerCase() === topLowStock.name.toLowerCase())
               );
@@ -555,7 +473,7 @@ return () => clearTimeout(timer);
               if (onDraftPO) {
                 onDraftPO({ item: topLowStock.name, supplierId });
               } else if (onNavigate) {
-                onNavigate('stock');
+                window.scrollTo(0,0); onNavigate('stock');
               }
             }}
           >
@@ -568,7 +486,7 @@ return () => clearTimeout(timer);
                 <div className="text-[10px] text-gray-500 dark:text-gray-400 dark:text-gray-300 font-medium">{topLowStock.name} ({topLowStock.currentStock}{topLowStock.unit} remaining, Min: {topLowStock.reorderLevel}{topLowStock.unit})</div>
               </div>
             </div>
-            <button 
+            <Pressable 
               className="text-[10px] font-bold bg-[#16321F] hover:bg-[#2C4134] text-white px-3 py-1.5 rounded-lg flex items-center gap-1 transition-colors" 
               onClick={(e) => { 
                 e.stopPropagation(); 
@@ -580,12 +498,12 @@ return () => clearTimeout(timer);
                 if (onDraftPO) {
                   onDraftPO({ item: topLowStock.name, supplierId });
                 } else if (onNavigate) {
-                  onNavigate('stock');
+                  window.scrollTo(0,0); onNavigate('stock');
                 }
               }}
             >
               Draft PO
-            </button>
+            </Pressable>
           </div>
           ) : (
           <div className="flex items-center justify-between p-3 rounded-lg border border-emerald-200 bg-emerald-50/50 dark:border-emerald-900/50 dark:bg-emerald-950/20">
@@ -604,7 +522,7 @@ return () => clearTimeout(timer);
           
           
           {topWastedItem && maxWaste > 5 ? (
-          <div className="flex items-center justify-between p-3 rounded-lg border border-amber-200 bg-amber-50/50 dark:border-amber-900/50 dark:bg-amber-950/20 cursor-pointer hover:bg-amber-100/50 transition-colors" onClick={() => { triggerHaptic('light'); setShowWasteInsight(true); }}>
+          <Pressable as="div" glowColor="amber" className="flex items-center justify-between p-3 rounded-lg border border-amber-200 bg-amber-50/50 dark:border-amber-900/50 dark:bg-amber-950/20 cursor-pointer hover:bg-amber-100/50 transition-colors w-full text-left" onClick={() => { setShowWasteInsight(true); }}>
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-600 flex items-center justify-center">
                 <Trash2 className="w-4 h-4" />
@@ -614,16 +532,16 @@ return () => clearTimeout(timer);
                 <div className="text-[10px] text-gray-500 dark:text-gray-400 dark:text-gray-300 font-medium">{topWastedItem} shows high waste consistently.</div>
               </div>
             </div>
-            <button className="text-[10px] font-bold bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-lg flex items-center gap-1 transition-colors" onClick={(e) => { e.stopPropagation(); triggerHaptic('light'); setShowWasteInsight(true); }}>
+            <Pressable className="text-[10px] font-bold bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-lg flex items-center gap-1 transition-colors" onClick={(e) => { e.stopPropagation(); setShowWasteInsight(true); }}>
               Review
-            </button>
-          </div>
+            </Pressable>
+          </Pressable>
           ) : null}
 
           
           
           {nextDelivery ? (
-          <div className="flex items-center justify-between p-3 rounded-lg border border-blue-200 bg-blue-50/50 dark:border-blue-900/50 dark:bg-blue-950/20 cursor-pointer hover:bg-blue-100/50 transition-colors" onClick={() => { triggerHaptic('light'); setShowModal('delivery'); }}>
+          <Pressable as="div" glowColor="blue" className="flex items-center justify-between p-3 rounded-lg border border-blue-200 bg-blue-50/50 dark:border-blue-900/50 dark:bg-blue-950/20 cursor-pointer hover:bg-blue-100/50 transition-colors w-full text-left" onClick={() => { setShowModal('delivery'); }}>
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 flex items-center justify-center">
                 <Truck className="w-4 h-4" />
@@ -633,10 +551,10 @@ return () => clearTimeout(timer);
                 <div className="text-[10px] text-gray-500 dark:text-gray-400 dark:text-gray-300 font-medium">{nextDelivery.supplierName} ({nextDelivery.id})</div>
               </div>
             </div>
-            <button className="text-[10px] font-bold bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg flex items-center gap-1 transition-colors" onClick={(e) => { e.stopPropagation(); triggerHaptic('light'); setShowModal('delivery'); }}>
+            <Pressable className="text-[10px] font-bold bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg flex items-center gap-1 transition-colors" onClick={(e) => { e.stopPropagation(); setShowModal('delivery'); }}>
               Receive
-            </button>
-          </div>
+            </Pressable>
+          </Pressable>
           ) : null}
 
         </div>
@@ -648,9 +566,6 @@ return () => clearTimeout(timer);
               <AlertCircle className="w-4 h-4 text-rose-500 animate-pulse" />
               Plate Waste Automated Alerts
             </h3>
-            <span className="text-[10px] font-bold text-rose-600 bg-rose-50 dark:bg-rose-950/30 px-2 py-1 rounded">
-              Active Threshold Monitor
-            </span>
           </div>
 
           {/* Section 1: Active Plate Waste Alerts */}
@@ -658,23 +573,23 @@ return () => clearTimeout(timer);
             <h4 className="text-xs font-bold text-gray-500 dark:text-gray-300 mb-3 flex items-center justify-between">
               <span>Active Alerts ({thresholdAlerts.filter(a => a.status === 'active').length})</span>
               {thresholdAlerts.filter(a => a.status === 'active').length > 0 && (
-                <button 
+                <Pressable 
                   onClick={() => {
-                    triggerHaptic('light');
+                    
                     setThresholdAlerts(prev => prev.map(a => ({ ...a, status: 'dismissed' })));
                     addToast('All alerts dismissed.', 'success');
                   }}
                   className="text-[10px] text-gray-500 dark:text-gray-400 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-200 underline font-semibold"
                 >
                   Dismiss All
-                </button>
+                </Pressable>
               )}
             </h4>
             {thresholdAlerts.filter(a => a.status === 'active').length === 0 ? (
               <div className="p-4 text-center bg-gray-50 dark:bg-[#1a1a1a]/40 rounded-xl border border-dashed border-gray-200 dark:border-gray-700">
                 <CheckCircle2 className="w-6 h-6 text-emerald-500 mx-auto mb-1.5" />
                 <p className="text-xs font-bold text-gray-700 dark:text-gray-300">All Waste Within Safety Margins</p>
-                <p className="text-[10px] text-gray-500 dark:text-gray-400 dark:text-gray-300 mt-0.5">No plate waste threshold violations detected today.</p>
+                <p className="text-[10px] text-gray-500 dark:text-gray-400 dark:text-gray-300 mt-0.5">No threshold violations today. You'll see alerts here if waste exceeds targets.</p>
               </div>
             ) : (
               <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
@@ -687,21 +602,21 @@ return () => clearTimeout(timer);
                       <div>
                         <div className="text-xs font-bold text-gray-900 dark:text-white">{alert.itemName}</div>
                         <div className="text-[10px] text-rose-600 dark:text-rose-400 font-semibold">
-                          Exceeded threshold! {alert.actualValue}kg / {alert.thresholdValue}kg ({alert.type === 'single' ? 'Single entry' : 'Daily sum'})
+                          Exceeded threshold! {alert.actualValue}kg / {alert.thresholdValue}kg
                         </div>
-                        <div className="text-[9px] text-gray-400 dark:text-gray-300 mt-0.5">{alert.date} at {alert.time}</div>
+                        <div className="text-[9px] text-gray-400 dark:text-gray-300 mt-0.5 font-mono">{alert.date} at {alert.time}</div>
                       </div>
                     </div>
-                    <button 
+                    <Pressable 
                       onClick={() => {
-                        triggerHaptic('light');
+                        
                         setThresholdAlerts(prev => prev.map(a => a.id === alert.id ? { ...a, status: 'dismissed' } : a));
                         addToast(`Alert for ${alert.itemName} dismissed.`, 'info');
                       }}
                       className="text-[10px] font-bold text-gray-600 dark:text-gray-300 hover:text-red-500 bg-white dark:bg-[#1a1a1a] px-2 py-1 rounded-md border border-gray-200 dark:border-gray-700 shadow-2xs shrink-0 transition-colors"
                     >
                       Dismiss
-                    </button>
+                    </Pressable>
                   </div>
                 ))}
               </div>
@@ -711,40 +626,38 @@ return () => clearTimeout(timer);
           {/* Section 2: Threshold Rules Configuration */}
           <div className="border-t border-gray-100 dark:border-gray-700 pt-3 mt-1">
             <h4 className="text-xs font-bold text-gray-500 dark:text-gray-300 mb-3 flex items-center justify-between">
-              <span>Define Item Waste Thresholds</span>
-              <span className="text-[9px] text-gray-400 dark:text-gray-300">Rules apply dynamically on log entries</span>
+              <span>Item Waste Thresholds</span>
             </h4>
             <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
               {plateWasteThresholds.map(rule => (
                 <div key={rule.menuItemId} className="p-2.5 bg-gray-50 dark:bg-[#1a1a1a]/30 border border-gray-100 dark:border-gray-700 rounded-xl flex items-center justify-between gap-4">
                   <div className="flex-grow min-w-0">
                     <div className="text-xs font-bold text-gray-800 dark:text-gray-200 truncate">{rule.itemName}</div>
-                    <div className="text-[10px] text-gray-500 dark:text-gray-400 dark:text-gray-300 font-medium">Alert if plate waste exceeds {rule.threshold.toFixed(1)} kg</div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <button
+                    <Pressable
                       onClick={() => {
-                        triggerHaptic('light');
+                        
                         setPlateWasteThresholds(prev => prev.map(t => t.menuItemId === rule.menuItemId ? { ...t, threshold: Math.max(0.5, t.threshold - 0.5) } : t));
                         addToast(`Threshold for ${rule.itemName} decreased to ${(rule.threshold - 0.5).toFixed(1)}kg`, 'info');
                       }}
                       className="w-7 h-7 bg-white dark:bg-[#222] border border-gray-200 dark:border-gray-700 rounded-lg flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#333] transition-colors"
                     >
                       <ChevronDown className="w-3.5 h-3.5" />
-                    </button>
+                    </Pressable>
                     <span className="text-xs font-extrabold font-mono w-12 text-center text-gray-900 dark:text-white">
                       {rule.threshold.toFixed(1)} kg
                     </span>
-                    <button
+                    <Pressable
                       onClick={() => {
-                        triggerHaptic('light');
+                        
                         setPlateWasteThresholds(prev => prev.map(t => t.menuItemId === rule.menuItemId ? { ...t, threshold: Math.min(20.0, t.threshold + 0.5) } : t));
                         addToast(`Threshold for ${rule.itemName} increased to ${(rule.threshold + 0.5).toFixed(1)}kg`, 'info');
                       }}
                       className="w-7 h-7 bg-white dark:bg-[#222] border border-gray-200 dark:border-gray-700 rounded-lg flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#333] transition-colors"
                     >
                       <ChevronUp className="w-3.5 h-3.5" />
-                    </button>
+                    </Pressable>
                   </div>
                 </div>
               ))}
@@ -752,62 +665,16 @@ return () => clearTimeout(timer);
           </div>
         </div>
 
-        {/* Global Kitchen & RSVP Settings */}
-        <div className="bg-white dark:bg-[#121212] rounded-2xl p-5 shadow-xs border border-gray-100 dark:border-gray-700 flex flex-col gap-4 mt-4">
-          <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-3">
-            <h3 className="text-sm font-extrabold text-[#0A170E] dark:text-white font-display flex items-center gap-2">
-              <Clock className="w-4 h-4 text-emerald-600" />
-              Global RSVP & Booking Settings
-            </h3>
-            <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 px-2 py-1 rounded">
-              Synced Real-Time
-            </span>
-          </div>
-
-          <div className="flex items-center justify-between p-3.5 bg-gray-50 dark:bg-[#1a1a1a]/30 border border-gray-100 dark:border-gray-700 rounded-xl">
-            <div className="space-y-0.5">
-              <span className="text-xs font-bold text-gray-800 dark:text-gray-200 block">Enforce Today's Cutoff (Block Opt-In)</span>
-              <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium text-left">
-                When active, blocks students from opting in for the present day (Today). When inactive, today's meals remain open.
-              </span>
-            </div>
-            <button
-              onClick={async () => {
-                triggerHaptic('medium');
-                const nextExempted = !sharedConfig?.config?.cutoffExempted;
-                const nextConfig = {
-                  ...sharedConfig?.config,
-                  cutoffExempted: nextExempted
-                };
-                const success = await updateSharedConfig(nextConfig, 'admin');
-                if (success) {
-                  addToast(nextExempted ? "Today's cutoff enforced! Opt-in for present day is blocked." : "Today's cutoff exempted! Present day opt-in is now open.", 'success');
-                } else {
-                  addToast("Failed to update RSVP cutoff setting.", 'error');
-                }
-              }}
-              className={`w-12 h-6 rounded-full p-0.5 transition-colors duration-300 focus:outline-none shrink-0 ${
-                sharedConfig?.config?.cutoffExempted ? 'bg-[#16321F]' : 'bg-gray-300'
-              }`}
-            >
-              <div
-                className={`w-5 h-5 rounded-full bg-white shadow-md transform transition-transform duration-300 ${
-                  sharedConfig?.config?.cutoffExempted ? 'translate-x-6' : 'translate-x-0'
-                }`}
-              />
-            </button>
-          </div>
-        </div>
-
-      {/* Modals and other stuff */}
+        {/* Modals and other stuff */}
       </div>
 
-      {showModal === 'delivery' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
-           <div className="bg-white dark:bg-[#121212] rounded-2xl w-full max-w-md p-6 shadow-2xl relative my-8">
-             <button onClick={() => setShowModal(null)} className="absolute top-4 right-4 p-2 bg-gray-100 dark:bg-[#222] rounded-full hover:bg-gray-200 transition-colors">
+      {showModal === 'delivery' && createPortal(
+        <FocusTrap>
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
+           <div className="bg-white dark:bg-[#121212] rounded-t-[32px] md:rounded-b-[32px] md:rounded-2xl w-full max-w-md p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:pb-6 shadow-2xl relative mt-auto md:my-8">
+             <Pressable onClick={() => setShowModal(null)} className="absolute top-4 right-4 p-2 bg-gray-100 dark:bg-[#222] rounded-full hover:bg-gray-200 transition-colors">
                <X className="w-4 h-4" />
-             </button>
+             </Pressable>
              <h3 className="text-lg font-bold mb-1 flex items-center gap-2"><Truck className="w-5 h-5 text-blue-500"/> Receive Delivery</h3>
              <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-300 mb-4">Mark active orders as received or make a custom entry.</p>
              
@@ -816,7 +683,7 @@ return () => clearTimeout(timer);
                {activeOrders.filter(o => o.status === 'Placed' || o.status === 'In Transit').length === 0 && (
                  <div className="flex flex-col items-center justify-center p-6 text-center bg-gray-50 dark:bg-[#1a1a1a] rounded-xl border border-dashed border-gray-200 dark:border-gray-700">
      <ShoppingCart className="w-8 h-8 text-gray-300 dark:text-gray-700 mb-2" />
-     <span className="text-xs font-bold text-gray-500 dark:text-gray-300">No pending orders</span>
+     <span className="text-xs font-bold text-gray-500 dark:text-gray-300">All clear. Any purchase orders pending your approval will appear here.</span>
    </div>
                )}
                {activeOrders.filter(o => o.status === 'Placed' || o.status === 'In Transit').map(order => (
@@ -843,7 +710,7 @@ return () => clearTimeout(timer);
                        </div>
                      </div>
                    </div>
-                   <button className="bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-600 transition-colors" onClick={() => {
+                   <Pressable className="bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-600 transition-colors" onClick={() => {
                      triggerHaptic('success');
                      if (onReceiveOrder) onReceiveOrder(order.id);
                      if (onAddActivityLog) {
@@ -857,7 +724,7 @@ return () => clearTimeout(timer);
                      }
                      addToast('Marked as received!', 'success');
                      setShowModal(null);
-                   }}>Receive</button>
+                   }}>Receive</Pressable>
                  </div>
                ))}
              </div>
@@ -927,18 +794,20 @@ return () => clearTimeout(timer);
                     </label>
                  </div>
                </div>
-               <button type="submit" className="w-full bg-[#16321F] dark:bg-emerald-800 text-white py-2 rounded-lg font-bold text-sm mt-2">Save Custom Entry</button>
+               <Pressable type="submit" className="w-full bg-[#16321F] dark:bg-emerald-800 text-white py-2 rounded-lg font-bold text-sm mt-2">Save Custom Entry</Pressable>
              </form>
            </div>
         </div>
-      )}
+        </FocusTrap>
+      , document.body)}
 
-      {showModal === 'leftovers' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
-           <div className="bg-white dark:bg-[#121212] rounded-2xl w-full max-w-md p-6 shadow-2xl relative my-8">
-             <button onClick={() => setShowModal(null)} className="absolute top-4 right-4 p-2 bg-gray-100 dark:bg-[#222] rounded-full hover:bg-gray-200 transition-colors">
+      {showModal === 'leftovers' && createPortal(
+        <FocusTrap>
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
+           <div className="bg-white dark:bg-[#121212] rounded-t-[32px] md:rounded-b-[32px] md:rounded-2xl w-full max-w-md p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:pb-6 shadow-2xl relative mt-auto md:my-8">
+             <Pressable onClick={() => setShowModal(null)} className="absolute top-4 right-4 p-2 bg-gray-100 dark:bg-[#222] rounded-full hover:bg-gray-200 transition-colors">
                <X className="w-4 h-4" />
-             </button>
+             </Pressable>
              <h3 className="text-lg font-bold mb-1 flex items-center gap-2"><Trash2 className="w-5 h-5 text-rose-500"/> Dynamic Waste Logger</h3>
              <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-300 mb-4">Log leftover food from the previous shift to update inventory and insights.</p>
              
@@ -976,7 +845,7 @@ return () => clearTimeout(timer);
              }} className="space-y-3">
                <div>
                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 dark:text-gray-300 mb-1">Shift</label>
-                 <select name="shift" className="w-full bg-gray-50 dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                 <select name="shift" className="w-full touch-manipulation min-h-[44px] bg-gray-50 dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500">
                    <option value="Breakfast">Breakfast</option>
                    <option value="Lunch">Lunch</option>
                    <option value="Dinner">Dinner</option>
@@ -984,7 +853,7 @@ return () => clearTimeout(timer);
                </div>
                <div>
                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 dark:text-gray-300 mb-1">Waste Type</label>
-                 <select name="wasteType" className="w-full bg-gray-50 dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                 <select name="wasteType" className="w-full touch-manipulation min-h-[44px] bg-gray-50 dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500">
                    <option value="Plate Waste">Plate Waste</option>
                    <option value="Preparation Waste">Preparation Waste</option>
                    <option value="Spoilage">Spoilage</option>
@@ -993,7 +862,7 @@ return () => clearTimeout(timer);
                <div className="grid grid-cols-2 gap-3">
                  <div>
                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 dark:text-gray-300 mb-1">Category</label>
-                   <select required name="category" className="w-full bg-gray-50 dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                   <select required name="category" className="w-full touch-manipulation min-h-[44px] bg-gray-50 dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500">
                      <option value="main">Main Course</option>
                      <option value="side">Side Dish</option>
                      <option value="dessert">Dessert</option>
@@ -1002,7 +871,7 @@ return () => clearTimeout(timer);
                  </div>
                  <div>
                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 dark:text-gray-300 mb-1">Item</label>
-                   <select required name="item" className="w-full bg-gray-50 dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                   <select required name="item" className="w-full touch-manipulation min-h-[44px] bg-gray-50 dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500">
                      <option value="">Select Item</option>
                      {menuItems.filter(m => m.dayOfWeek === (selectedDay || 'Thursday')).map(m => (
                        <option key={m.id} value={m.name}>{m.name}</option>
@@ -1012,20 +881,22 @@ return () => clearTimeout(timer);
                </div>
                <div>
                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 dark:text-gray-300 mb-1">Estimated Weight (kg)</label>
-                 <input required type="number" step="0.1" name="weight" placeholder="0.0" className="w-full bg-gray-50 dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+                 <input required type="number" step="0.1" name="weight" placeholder="0.0" className="w-full touch-manipulation min-h-[44px] bg-gray-50 dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500" />
                </div>
-               <button type="submit" className="w-full bg-rose-500 text-white py-2 rounded-xl font-bold text-sm hover:bg-rose-600 transition-colors mt-2">Log Waste</button>
+               <Pressable type="submit" className="w-full bg-rose-500 text-white py-2 rounded-xl font-bold text-sm hover:bg-rose-600 transition-colors mt-2">Log Waste</Pressable>
              </form>
            </div>
         </div>
-      )}
+        </FocusTrap>
+      , document.body)}
 
-      {showModal === 'issue' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
-           <div className="bg-white dark:bg-[#121212] rounded-2xl w-full max-w-md p-6 shadow-2xl relative my-8">
-             <button onClick={() => setShowModal(null)} className="absolute top-4 right-4 p-2 bg-gray-100 dark:bg-[#222] rounded-full hover:bg-gray-200 transition-colors">
+      {showModal === 'issue' && createPortal(
+        <FocusTrap>
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
+           <div className="bg-white dark:bg-[#121212] rounded-t-[32px] md:rounded-b-[32px] md:rounded-2xl w-full max-w-md p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:pb-6 shadow-2xl relative mt-auto md:my-8">
+             <Pressable onClick={() => setShowModal(null)} className="absolute top-4 right-4 p-2 bg-gray-100 dark:bg-[#222] rounded-full hover:bg-gray-200 transition-colors">
                <X className="w-4 h-4" />
-             </button>
+             </Pressable>
              <h3 className="text-lg font-bold mb-1 flex items-center gap-2"><AlertCircle className="w-5 h-5 text-amber-500"/> Report Issue</h3>
              <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-300 mb-4">Log an equipment failure, hygiene issue, or supply problem.</p>
              
@@ -1038,7 +909,7 @@ return () => clearTimeout(timer);
              }} className="space-y-3">
                <div>
                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 dark:text-gray-300 mb-1">Issue Type</label>
-                 <select name="type" className="w-full bg-gray-50 dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                 <select name="type" className="w-full touch-manipulation min-h-[44px] bg-gray-50 dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500">
                    <option value="Equipment">Equipment Failure</option>
                    <option value="Hygiene">Hygiene / Cleanliness</option>
                    <option value="Supply">Supply Discrepancy</option>
@@ -1047,7 +918,7 @@ return () => clearTimeout(timer);
                </div>
                <div>
                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 dark:text-gray-300 mb-1">Description</label>
-                 <textarea required name="description" rows={3} placeholder="Describe the issue in detail..." className="w-full bg-gray-50 dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"></textarea>
+                 <textarea required name="description" rows={3} placeholder="Describe the issue in detail..." className="w-full touch-manipulation min-h-[44px] bg-gray-50 dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"></textarea>
                </div>
                <div>
                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 dark:text-gray-300 mb-1">Photo Evidence (Optional)</label>
@@ -1070,18 +941,20 @@ return () => clearTimeout(timer);
                     </label>
                  </div>
                </div>
-               <button type="submit" className="w-full bg-amber-500 text-white py-2 rounded-xl font-bold text-sm hover:bg-amber-600 transition-colors mt-2">Submit Issue</button>
+               <Pressable type="submit" className="w-full bg-amber-500 text-white py-2 rounded-xl font-bold text-sm hover:bg-amber-600 transition-colors mt-2">Submit Issue</Pressable>
              </form>
            </div>
         </div>
-      )}
+        </FocusTrap>
+      , document.body)}
 
-      {showModal === 'diners' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-y-auto animate-fade-in">
-           <div className="bg-white dark:bg-[#121212] rounded-2xl w-full max-w-lg p-6 shadow-2xl relative my-8 border border-gray-100 dark:border-gray-800">
-             <button onClick={() => setShowModal(null)} className="absolute top-4 right-4 p-2 bg-gray-100 dark:bg-[#222] rounded-full hover:bg-gray-200 transition-colors">
+      {showModal === 'diners' && createPortal(
+        <FocusTrap>
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 bg-black/50 backdrop-blur-sm overflow-y-auto animate-fade-in">
+           <div className="bg-white dark:bg-[#121212] rounded-t-[32px] md:rounded-b-[32px] md:rounded-2xl w-full max-w-lg p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:pb-6 shadow-2xl relative mt-auto md:my-8 border border-gray-100 dark:border-gray-800">
+             <Pressable onClick={() => setShowModal(null)} className="absolute top-4 right-4 p-2 bg-gray-100 dark:bg-[#222] rounded-full hover:bg-gray-200 transition-colors">
                <X className="w-4 h-4" />
-             </button>
+             </Pressable>
              <h3 className="text-xl font-bold mb-1 flex items-center gap-2"><Utensils className="w-5 h-5 text-emerald-600"/> Expected Diners & Portions</h3>
              <p className="text-xs text-gray-500 dark:text-gray-400 mb-6">Breakdown for all shifts on <strong>{day} ({getFormattedDate()})</strong></p>
              
@@ -1156,23 +1029,26 @@ return () => clearTimeout(timer);
                })}
              </div>
 
-             <button onClick={() => setShowModal(null)} className="w-full bg-gray-900 dark:bg-gray-800 text-white py-2.5 rounded-xl font-bold text-sm mt-6 hover:bg-gray-800 transition-colors">
+             <Pressable onClick={() => setShowModal(null)} className="w-full bg-gray-900 dark:bg-gray-800 text-white py-2.5 rounded-xl font-bold text-sm mt-6 hover:bg-gray-800 transition-colors">
                Close Breakdown
-             </button>
+             </Pressable>
            </div>
         </div>
-      )}
+        </FocusTrap>
+      , document.body)}
 
-      {showWasteInsight && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
-           <div className="bg-white dark:bg-[#121212] rounded-2xl w-full max-w-md p-6 shadow-2xl relative my-8">
+      {showWasteInsight && createPortal(
+        <FocusTrap>
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
+           <div className="bg-white dark:bg-[#121212] rounded-t-[32px] md:rounded-b-[32px] md:rounded-2xl w-full max-w-md p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:pb-6 shadow-2xl relative mt-auto md:my-8">
              <h3 className="text-xl font-bold mb-4 text-amber-600">Waste AI Insight</h3>
              <p className="text-sm mb-4">Machine Learning Insight: Based on recent logs, {topWastedItem} has shown unusually high plate waste.</p>
-             <button onClick={() => setShowWasteInsight(false)} className="w-full bg-[#16321F] text-white py-2 rounded-lg mb-2">Apply 20% Reduction to Next Order</button>
-             <button onClick={() => setShowWasteInsight(false)} className="w-full bg-gray-200 text-gray-900 py-2 rounded-lg">Dismiss</button>
+             <Pressable onClick={() => setShowWasteInsight(false)} className="w-full bg-[#16321F] text-white py-2 rounded-lg mb-2">Apply 20% Reduction to Next Order</Pressable>
+             <Pressable onClick={() => setShowWasteInsight(false)} className="w-full bg-gray-200 text-gray-900 py-2 rounded-lg">Dismiss</Pressable>
            </div>
         </div>
-      )}
+        </FocusTrap>
+      , document.body)}
     </div>
   );
 }

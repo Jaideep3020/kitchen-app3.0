@@ -1,7 +1,7 @@
 export type Role = 'student' | 'staff' | 'manager' | null;
 
 export type StudentTab = 'menu' | 'checkin' | 'profile';
-export type StaffTab = 'dashboard' | 'ops' | 'stock' | 'reports' | 'launch' | 'management' | 'menu-builder';
+export type StaffTab = 'dashboard' | 'ops' | 'stock' | 'reports' | 'launch' | 'management' | 'settings';
 
 export interface MenuItem {
   id: string;

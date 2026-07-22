@@ -41,16 +41,23 @@
   100% { background-position: 0% 50%; }
 }
 
-.animate-tab-transition {
-  animation: fadeInSlide 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
+@media (prefers-reduced-motion: no-preference) {
+  .animate-tab-transition {
+    animation: fadeInSlide 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
 
-.animate-skeleton-pulse {
-  animation: pulse-slow 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
+  .animate-skeleton-pulse {
+    animation: pulse-slow 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
 
-.animate-haptic-tap {
-  animation: haptic-shake 150ms ease-in-out;
+  .animate-haptic-tap {
+    animation: haptic-shake 150ms ease-in-out;
+  }
+
+  .animate-radar {
+    animation: radar-scan 4s linear infinite;
+    transform-origin: center;
+  }
 }
 
 /* Hide scrollbars but keep functionality */
@@ -81,13 +88,32 @@
   100% { transform: rotate(360deg); }
 }
 
-.animate-radar {
-  animation: radar-scan 4s linear infinite;
-  transform-origin: center;
-}
+
 
 @keyframes dash {
   to {
     stroke-dashoffset: -8;
+  }
+}
+
+@layer base {
+  button:not([class*="focus:ring-"]):not([class*="focus-visible:ring-"]),
+  a:not([class*="focus:ring-"]):not([class*="focus-visible:ring-"]),
+  input:not([class*="focus:ring-"]):not([class*="focus-visible:ring-"]),
+  select:not([class*="focus:ring-"]):not([class*="focus-visible:ring-"]),
+  textarea:not([class*="focus:ring-"]):not([class*="focus-visible:ring-"]),
+  [role="button"]:not([class*="focus:ring-"]):not([class*="focus-visible:ring-"]),
+  [role="tab"]:not([class*="focus:ring-"]):not([class*="focus-visible:ring-"]) {
+    @apply focus-visible:ring-2 focus-visible:ring-[#D9E96B] focus-visible:ring-offset-2 focus-visible:ring-offset-[#EAF5E4] dark:focus-visible:ring-offset-[#121212] focus-visible:outline-none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse,
+  .animate-skeleton-pulse,
+  .animate-bounce,
+  .animate-spin,
+  .animate-ping {
+    animation: none !important;
   }
 }

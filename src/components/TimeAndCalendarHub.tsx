@@ -1,4 +1,6 @@
+import { Pressable } from './Pressable';
 import React, { useState, useEffect, useLayoutEffect } from 'react';
+import FocusTrap from 'focus-trap-react';
 import {
   Clock, Calendar, ChevronDown, ChevronUp, Coffee, Utensils, Moon, X
 } from 'lucide-react';
@@ -133,7 +135,7 @@ export default function TimeAndCalendarHub({
 
   return (
     <div className="bg-transparent relative z-30">
-      <div className="max-w-7xl mx-auto px-1 md:px-4 py-1 flex items-center gap-2 text-xs w-full overflow-x-auto hide-scrollbar">
+      <div className="max-w-7xl mx-auto px-1 md:px-4 py-1 flex items-center gap-2 text-xs w-full overflow-x-auto hide-scrollbar snap-x snap-mandatory touch-pan-x">
         {/* Pulsing clock badge (Left Side) */}
         <div className="flex items-center gap-2 bg-[#D1EBD9] text-[#16321F] px-3 py-1.5 rounded-full font-bold shadow-sm shrink-0">
           <Clock className="w-4 h-4 text-[#16321F]" />
@@ -147,9 +149,9 @@ export default function TimeAndCalendarHub({
         </div>
 
         {/* Active Shift badge (Acts as Calendar Toggle) */}
-        <button
+        <Pressable
           type="button"
-          onClick={() => { triggerHaptic('light'); setIsOpen(!isOpen); }}
+          onClick={() => { setIsOpen(!isOpen); }}
           className="px-3 py-1.5 rounded-full bg-[#F5F7F8] border border-gray-100/60 flex items-center gap-2 shadow-sm hover:bg-[#E8ECEA] transition-colors font-bold active:scale-95 flex-1 w-full justify-between sm:justify-start min-w-0"
         >
           <div className="flex items-center gap-2 truncate">
@@ -162,7 +164,7 @@ export default function TimeAndCalendarHub({
             <Calendar className="w-4 h-4 text-[#1F2C24]/50 hidden sm:block" />
             {isOpen ? <ChevronUp className="w-4 h-4 text-[#1F2C24]/60" /> : <ChevronDown className="w-4 h-4 text-[#1F2C24]/60" />}
           </div>
-        </button>
+        </Pressable>
       </div>
 
       {/* Expandable Calendar and Time Machine Console */}
@@ -201,11 +203,11 @@ export default function TimeAndCalendarHub({
                       const isRealCurrent = day.dayNum === 9 && day.dateObj.getMonth() === 6; // July 9 2026
                       
                       return (
-                        <button
+                        <Pressable
                           key={idx}
                           type="button"
                           onClick={() => handleDayClick(day)}
-                          className={`h-7 rounded-[20px] text-xs font-bold transition-all relative flex flex-col items-center justify-center cursor-pointer ${
+                          className={`min-h-[44px] rounded-[20px] text-xs font-bold transition-all relative flex flex-col items-center justify-center cursor-pointer ${
                             !day.isCurrentMonth
                               ? 'text-gray-300 pointer-events-none'
                               : isSelected
@@ -217,7 +219,7 @@ export default function TimeAndCalendarHub({
                           {isRealCurrent && (
                             <span className="absolute bottom-0.5 w-1 h-1 rounded-full bg-amber-400 animate-ping" />
                           )}
-                        </button>
+                        </Pressable>
                       );
                     })}
                   </div>
@@ -236,6 +238,7 @@ export default function TimeAndCalendarHub({
       {typeof document !== 'undefined' ? createPortal(
         <AnimatePresence>
           {popupDate && (
+            <FocusTrap>
             <div className="fixed inset-0 z-[100] flex items-start justify-center pt-8 px-4 pb-4 pointer-events-auto">
               <motion.div 
                 initial={{ opacity: 0 }}
@@ -261,12 +264,12 @@ export default function TimeAndCalendarHub({
                       {popupDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                     </p>
                   </div>
-                  <button 
+                  <Pressable 
                     onClick={() => setPopupDate(null)}
                     className="p-2 bg-gray-100 dark:bg-[#222] rounded-full hover:bg-gray-200 dark:hover:bg-[#333] transition-colors"
                   >
                     <X className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-                  </button>
+                  </Pressable>
                 </div>
                 
                 <div className="overflow-y-auto p-4 space-y-4">
@@ -296,12 +299,13 @@ export default function TimeAndCalendarHub({
                   
                   {(menuItems || []).filter(item => item.dayOfWeek === WEEKDAYS[popupDate.getDay()]).length === 0 && (
                     <div className="py-6 text-center text-gray-500 text-sm font-medium">
-                      No menu items scheduled for this day.
+                      No menu items scheduled for this day yet. Add them in Menu Builder.
                     </div>
                   )}
                 </div>
               </motion.div>
             </div>
+            </FocusTrap>
           )}
                 </AnimatePresence>,
         document.body

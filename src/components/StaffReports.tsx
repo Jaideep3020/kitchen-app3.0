@@ -1,3 +1,4 @@
+import { Pressable } from './Pressable';
 import React, { useState } from 'react';
 import { ErrorBoundary } from './ErrorBoundary';
 import { useReportMetrics } from '../hooks/useReportMetrics';
@@ -7,7 +8,7 @@ import {
 } from 'lucide-react';
 import { 
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  BarChart, Bar, LineChart, Line, ComposedChart
+  BarChart, Bar, LineChart, Line, ComposedChart, PieChart, Pie, Cell
 } from 'recharts';
 import { EfficiencyRecord, InventoryItem, Supplier, ActivityLog } from '../types';
 
@@ -126,18 +127,18 @@ export default function StaffReports({
           <p className="text-sm text-gray-500 dark:text-gray-300">KPI Dashboard & Supply Chain Forecasting</p>
         </div>
         <div className="flex bg-gray-100 dark:bg-[#222] rounded-lg p-1 w-fit">
-          <button 
+          <Pressable 
             onClick={() => setViewMode('chart')}
             className={`px-4 py-1.5 text-sm font-bold rounded-md transition-colors ${viewMode === 'chart' ? 'bg-white dark:bg-[#333] text-[#16321F] dark:text-[#D9E96B] shadow-sm' : 'text-gray-500 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100'}`}
           >
             Visual
-          </button>
-          <button 
+          </Pressable>
+          <Pressable 
             onClick={() => setViewMode('table')}
             className={`px-4 py-1.5 text-sm font-bold rounded-md transition-colors ${viewMode === 'table' ? 'bg-white dark:bg-[#333] text-[#16321F] dark:text-[#D9E96B] shadow-sm' : 'text-gray-500 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100'}`}
           >
             Raw Data
-          </button>
+          </Pressable>
         </div>
       </div>
 
@@ -371,18 +372,47 @@ export default function StaffReports({
 
           <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
             <h4 className="text-xs font-bold text-gray-500 dark:text-gray-400 dark:text-gray-300 uppercase tracking-wider mb-3">Primary Waste Drivers</h4>
-            <div className="space-y-3">
-              {wasteReasons.map((reason, idx) => (
-                <div key={idx} className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{reason.reason}</span>
-                  <div className="flex items-center gap-3 w-1/2">
-                    <div className="flex-grow h-2 bg-gray-100 dark:bg-[#222] rounded-full overflow-hidden">
-                      <div className="h-full bg-amber-500 rounded-full" style={{ width: `${reason.percentage}%` }}></div>
+            <div className="flex items-center justify-between h-36">
+              <div className="w-[45%] h-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={wasteReasons}
+                      dataKey="percentage"
+                      nameKey="reason"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={30}
+                      outerRadius={50}
+                      paddingAngle={3}
+                      stroke="none"
+                    >
+                      {wasteReasons.map((entry, index) => {
+                        const colors = ['#f59e0b', '#ef4444', '#10b981', '#8b5cf6'];
+                        return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
+                      })}
+                    </Pie>
+                    <Tooltip 
+                      formatter={(value: any) => `${value}%`}
+                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', fontSize: '12px' }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="w-[55%] flex flex-col justify-center space-y-3">
+                {wasteReasons.map((reason, idx) => {
+                  const colors = ['bg-amber-500', 'bg-red-500', 'bg-emerald-500', 'bg-purple-500'];
+                  return (
+                    <div key={idx} className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1.5 truncate pr-2">
+                        <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${colors[idx % colors.length]}`}></div>
+                        <span className="font-medium text-gray-700 dark:text-gray-300 truncate" title={reason.reason}>{reason.reason}</span>
+                      </div>
+                      <span className="font-bold text-gray-900 dark:text-white shrink-0">{reason.percentage}%</span>
                     </div>
-                    <span className="text-xs font-bold text-gray-900 dark:text-white w-8 text-right">{reason.percentage}%</span>
-                  </div>
-                </div>
-              ))}
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
@@ -560,9 +590,9 @@ export default function StaffReports({
             ))}
           </div>
 
-          <button className="relative z-10 mt-6 w-full py-3 bg-[#D9E96B] hover:bg-white text-[#16321F] rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2">
+          <Pressable className="relative z-10 mt-6 w-full py-3 bg-[#D9E96B] hover:bg-white text-[#16321F] rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2">
             Apply All Adjustments <ArrowRight className="w-4 h-4" />
-          </button>
+          </Pressable>
         </div>
       </div>
     </div>

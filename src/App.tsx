@@ -3,12 +3,12 @@ import { fetchInventory, fetchActiveOrders, fetchActivityLogs } from './api';
 import React, { useState, useEffect } from 'react';
 import { useData } from './contexts/DataContext';
 import { useToast } from './contexts/ToastContext';
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence, MotionConfig, useReducedMotion } from "motion/react";
 import { 
  Menu, RotateCw, Moon, Sun, Bell, Search,
   Clock, Calendar, Flame, CheckCircle2, 
  Plus, Users, ChefHat, Trash2, Truck, Utensils, 
- BarChart2, Package, User, LogOut, ArrowRight, ClipboardList, Rocket, TrendingDown, Camera, Shield
+ BarChart2, Package, User, LogOut, ArrowRight, ClipboardList, Rocket, TrendingDown, Camera, Shield, Lock, Unlock
 } from 'lucide-react';
 import { 
  Role, StudentTab, StaffTab, MenuItem, InventoryItem, 
@@ -34,14 +34,15 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import StaffManagement from "./components/StaffManagement";
 import StaffLaunchHub from './components/StaffLaunchHub';
 import ManagerMenu from './components/ManagerMenu';
-import ManagerSettings from './components/ManagerSettings';
 import TimeAndCalendarHub from './components/TimeAndCalendarHub';
 import { triggerHaptic } from './lib/haptics';
+import { Pressable } from './components/Pressable';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { WifiOff, Settings } from 'lucide-react';
 
 
 export default function App() {
+  const shouldReduceMotion = useReducedMotion();
   const { addToast } = useToast();
  const [role, setRole] = useState<Role>(null);
  const queryClient = useQueryClient();
@@ -91,7 +92,8 @@ export default function App() {
     thresholdAlerts, setThresholdAlerts,
     studentChoices, setStudentChoices,
     mealOptIns,
-    currentUserEmail, setCurrentUserEmail
+    currentUserEmail, setCurrentUserEmail,
+    sharedConfig, updateSharedConfig
   } = useData();
 
 
@@ -201,8 +203,7 @@ export default function App() {
  const chosenCount = Object.values(choices).filter(v => v).length;
  
  // Add to recent activity logs
- const newLog: ActivityLog = {
- id: `act_${Date.now()}`,
+ const newLog: ActivityLog = { id: Date.now().toString(), 
  title: 'Patron Opted In',
  timeAgo: 'Just now',
  description: `Student confirmed preference for ${chosenCount} items.`,
@@ -241,9 +242,8 @@ export default function App() {
     );
     if (alreadyAlerted) return;
 
-    const alertId = `alert_${Date.now()}`;
     const newAlert: ThresholdAlert = {
-      id: alertId,
+      id: Date.now().toString(),
       menuItemId,
       itemName,
       thresholdValue: threshold,
@@ -257,12 +257,10 @@ export default function App() {
     setThresholdAlerts(prev => [newAlert, ...prev]);
 
     // Add to activity logs for dashboard visibility
-    const activityLog: ActivityLog = {
-      id: `act_alert_${Date.now()}`,
+    const activityLog: ActivityLog = { id: Date.now().toString(), 
       title: `🚨 WASTE ALERT: ${itemName}`,
       timeAgo: 'Just now',
-      description: `${type === 'single' ? 'Single entry' : 'Cumulative daily'} plate waste of ${actual.toFixed(1)}kg exceeded the threshold of ${threshold.toFixed(1)}kg!`,
-      type: 'waste'
+      type: 'waste', description: `High waste detected for ${itemName}`
     };
     setActivityLogs(prev => [activityLog, ...prev]);
   };
@@ -273,8 +271,7 @@ export default function App() {
     const amountDesc = level === 'none' ? '0% waste' : level === 'a_little' ? '15% waste' : level === 'half' ? '50% waste' : '80% waste';
     const wasteWeight = level === 'none' ? 0 : level === 'a_little' ? 1.2 : level === 'half' ? 2.5 : 5.2;
     
-    const newLog: ActivityLog = {
-      id: `act_${Date.now()}`,
+    const newLog: ActivityLog = { id: Date.now().toString(), 
       title: 'Plate Waste Logged',
       timeAgo: 'Just now',
       description: `Student checked in ${dishName} with ${amountDesc}.`,
@@ -300,8 +297,7 @@ export default function App() {
   };
 
   const handleStaffLogWaste = (itemName: string, kitchenQty: number, plateQty: number) => {
-    const newLog: ActivityLog = {
-      id: `act_${Date.now()}`,
+    const newLog: ActivityLog = { id: Date.now().toString(), 
       title: `${itemName} Waste Logged`,
       timeAgo: 'Just now',
       description: `${kitchenQty}kg Kitchen + ${plateQty}kg Plate waste entered.`,
@@ -332,8 +328,7 @@ export default function App() {
  const supplierName = suppliers.find(s => s.id === supplierId)?.name || 'Supplier';
  
  // Log the order dispatch
- const newLog: ActivityLog = {
- id: `act_${Date.now()}`,
+ const newLog: ActivityLog = { id: Date.now().toString(), 
  title: `Order Dispatched`,
  timeAgo: 'Just now',
  description: `Reordered materials with ${supplierName} under active delivery SLA.`,
@@ -342,10 +337,7 @@ export default function App() {
  setActivityLogs(prev => [newLog, ...prev]);
 
  // Create a new active order dynamically
- const newOrder: ActiveOrder = {
- id: `PO-${Math.floor(2000 + Math.random() * 100)}`,
- supplierName,
- eta: 'In 2 days',
+ const newOrder: ActiveOrder = { id: Date.now().toString(), supplierName, eta: 'In 2 days',
  status: 'Placed'
  };
  setActiveOrders(prev => [newOrder, ...prev]);
@@ -369,21 +361,19 @@ export default function App() {
   };
 
   const handlePlacePurchaseOrder = (itemName: string, qty: number, unit: string, supplierName: string) => {
- const poId = `PO-${Math.floor(2100 + Math.random() * 100)}`;
  
  const newOrder: ActiveOrder = {
- id: poId,
+ id: Date.now().toString(),
  supplierName,
  eta: 'In 1-2 days',
  status: 'Placed'
  };
  setActiveOrders(prev => [newOrder, ...prev]);
 
- const newLog: ActivityLog = {
- id: `act_${Date.now()}`,
+ const newLog: ActivityLog = { id: Date.now().toString(), 
  title: `Order Placed: ${itemName}`,
  timeAgo: 'Just now',
- description: `Dispatched Grocery Order ${poId} for ${qty}${unit} with ${supplierName}.`,
+ description: `Dispatched Grocery Order ${Date.now().toString()} for ${qty}${unit} with ${supplierName}.`,
  type: 'order'
  };
  setActivityLogs(prev => [newLog, ...prev]);
@@ -429,8 +419,7 @@ export default function App() {
  <>
   <NotificationInbox 
         role={role}
-        isOpen={showNotifications} 
-        onClose={() => setShowNotifications(false)} 
+        isOpen={showNotifications} onClose={() => setShowNotifications(false)} 
         prepItems={prepItems} 
         onNavigateToStock={(draftPO) => {
           setStaffTab('stock');
@@ -446,11 +435,10 @@ export default function App() {
           <WifiOff className="w-4 h-4" />
           You are currently offline. Local changes will sync when connection is restored.
         </div>
-      )}
 
+      )}
       <aside className="hidden md:flex w-[240px] lg:w-[260px] flex-col bg-white/60 dark:bg-[#0A0A0A]/60 backdrop-blur-xl border-r border-gray-200/50 dark:border-gray-800/50 shrink-0 z-50">
         <div 
-          onClick={() => triggerHaptic('medium')}
           className="p-6 flex items-center gap-3 cursor-pointer border-b border-gray-100/50 dark:border-gray-800/50 hover:bg-gray-50/50 dark:hover:bg-gray-900/50 transition-colors"
         >
           <div className="w-10 h-10 rounded-full bg-[#16321F] dark:bg-[#D9E96B] text-[#D9E96B] dark:text-[#16321F] flex items-center justify-center shadow-sm">
@@ -462,25 +450,25 @@ export default function App() {
         <nav className="flex-1 px-4 py-6 flex flex-col gap-2 overflow-y-auto">
           {role === 'student' ? (
             <>
-              <button onClick={() => setStudentTab('menu')} className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${studentTab === 'menu' ? 'bg-[#16321F] text-[#D9E96B] dark:bg-[#D9E96B] dark:text-[#16321F] shadow-md' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200'}`}>
+              <Pressable onClick={() => { setStudentTab('menu'); }} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${studentTab === 'menu' ? 'bg-[#16321F] text-[#D9E96B] dark:bg-[#D9E96B] dark:text-[#16321F] font-bold shadow-md' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
                 <Utensils className="w-5 h-5" /> Weekly Menu
-              </button>
-              <button onClick={() => setStudentTab('checkin')} className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${studentTab === 'checkin' ? 'bg-[#16321F] text-[#D9E96B] dark:bg-[#D9E96B] dark:text-[#16321F] shadow-md' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200'}`}>
+              </Pressable>
+              <Pressable onClick={() => { setStudentTab('checkin'); }} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${studentTab === 'checkin' ? 'bg-[#16321F] text-[#D9E96B] dark:bg-[#D9E96B] dark:text-[#16321F] font-bold shadow-md' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
                 <Camera className="w-5 h-5" /> Scan & Check-in
-              </button>
-              <button onClick={() => setStudentTab('profile')} className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${studentTab === 'profile' ? 'bg-[#16321F] text-[#D9E96B] dark:bg-[#D9E96B] dark:text-[#16321F] shadow-md' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200'}`}>
+              </Pressable>
+              <Pressable onClick={() => { setStudentTab('profile'); }} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${studentTab === 'profile' ? 'bg-[#16321F] text-[#D9E96B] dark:bg-[#D9E96B] dark:text-[#16321F] font-bold shadow-md' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
                 <Users className="w-5 h-5" /> Profile
-              </button>
+              </Pressable>
             </>
           ) : (
             <>
-              <button onClick={() => setStaffTab('dashboard')} className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${staffTab === 'dashboard' ? 'bg-[#16321F] text-[#D9E96B] dark:bg-[#D9E96B] dark:text-[#16321F] shadow-md' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200'}`}>
+              <Pressable onClick={() => { setStaffTab('dashboard'); }} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${staffTab === 'dashboard' ? 'bg-[#16321F] text-[#D9E96B] dark:bg-[#D9E96B] dark:text-[#16321F] font-bold shadow-md' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
                 <TrendingDown className="w-5 h-5" /> Ops Dashboard
-              </button>
-              <button onClick={() => setStaffTab('ops')} className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${staffTab === 'ops' ? 'bg-[#16321F] text-[#D9E96B] dark:bg-[#D9E96B] dark:text-[#16321F] shadow-md' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200'}`}>
+              </Pressable>
+              <Pressable onClick={() => { setStaffTab('ops'); }} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${staffTab === 'ops' ? 'bg-[#16321F] text-[#D9E96B] dark:bg-[#D9E96B] dark:text-[#16321F] font-bold shadow-md' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
                 <ChefHat className="w-5 h-5" /> Today's Prep
-              </button>
-              <button onClick={() => setStaffTab('stock')} className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold transition-all ${staffTab === 'stock' ? 'bg-[#16321F] text-[#D9E96B] dark:bg-[#D9E96B] dark:text-[#16321F] shadow-md' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200'}`}>
+              </Pressable>
+              <Pressable onClick={() => { setStaffTab('stock'); }} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all justify-between ${staffTab === 'stock' ? 'bg-[#16321F] text-[#D9E96B] dark:bg-[#D9E96B] dark:text-[#16321F] font-bold shadow-md' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
                 <div className="flex items-center gap-3">
                   <Package className="w-5 h-5" /> Stock
                 </div>
@@ -489,22 +477,20 @@ export default function App() {
                     {lowStockCount}
                   </span>
                 )}
-              </button>
-              <button onClick={() => setStaffTab('reports')} className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${staffTab === 'reports' ? 'bg-[#16321F] text-[#D9E96B] dark:bg-[#D9E96B] dark:text-[#16321F] shadow-md' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200'}`}>
+              </Pressable>
+              <Pressable onClick={() => { setStaffTab('reports'); }} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${staffTab === 'reports' ? 'bg-[#16321F] text-[#D9E96B] dark:bg-[#D9E96B] dark:text-[#16321F] font-bold shadow-md' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
                 <ClipboardList className="w-5 h-5" /> Reports
-              </button>
+              </Pressable>
               <div className="my-2 border-t border-gray-100 dark:border-gray-800/50"></div>
-              <button onClick={() => setStaffTab('launch')} className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${staffTab === 'launch' ? 'bg-amber-500 text-white shadow-md' : 'text-amber-600 dark:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10'}`}>
+              <Pressable onClick={() => { setStaffTab('launch'); }} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${staffTab === 'launch' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 font-bold shadow-sm' : 'text-amber-600/80 dark:text-amber-500/70 hover:bg-amber-50 dark:hover:bg-amber-900/20'}`}>
                 <Rocket className="w-5 h-5" /> Launch Campaign
-              </button>
+              </Pressable>
               {role === "manager" && (
                 <>
-                  <button onClick={() => setStaffTab("management")} className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${staffTab === "management" ? "bg-[#16321F] text-[#D9E96B] dark:bg-[#D9E96B] dark:text-[#16321F] shadow-md" : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200"}`}>
-                    <Shield className="w-5 h-5" /> Management
-                  </button>
-                  <button onClick={() => setStaffTab("menu-builder")} className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${staffTab === "menu-builder" ? "bg-[#16321F] text-[#D9E96B] dark:bg-[#D9E96B] dark:text-[#16321F] shadow-md" : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200"}`}>
-                    <Utensils className="w-5 h-5" /> Menu Builder
-                  </button>
+                  <Pressable onClick={() => { setStaffTab('management'); }} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${staffTab === 'management' ? 'bg-[#16321F] text-[#D9E96B] dark:bg-[#D9E96B] dark:text-[#16321F] font-bold shadow-md' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+                    <Shield className="w-5 h-5" /> Manager Hub
+                  </Pressable>
+                  
                 </>
               )}
             </>
@@ -518,14 +504,40 @@ export default function App() {
  <div className="max-w-[1400px] mx-auto flex flex-wrap lg:flex-nowrap justify-between items-center gap-y-2 gap-x-2 sm:gap-4">
  
  {/* Interactive Brand Logo - Top Left */}
- <div 
-   onClick={() => triggerHaptic('medium')}
-   className="pointer-events-auto bg-white/95 dark:bg-[#121212]/95 backdrop-blur-md px-2 py-2 sm:px-3 sm:py-2 rounded-full border border-gray-200 dark:border-gray-800 shadow-sm flex md:hidden items-center gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900 transition-all group shrink-0"
+ <div className="flex items-center gap-2 pointer-events-auto shrink-0">
+ <div
+    className="bg-white/95 dark:bg-[#121212]/95 backdrop-blur-md px-2 py-2 sm:px-3 sm:py-2 rounded-full border border-gray-200 dark:border-gray-800 shadow-sm flex md:hidden items-center gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900 transition-all group shrink-0"
  >
    <div className="w-8 h-8 rounded-full bg-[#16321F] dark:bg-[#D9E96B] text-[#D9E96B] dark:text-[#16321F] flex items-center justify-center group-hover:scale-105 transition-transform shadow-xs">
      <ChefHat className="w-4 h-4" />
    </div>
    <span className="font-extrabold font-display text-gray-900 dark:text-white tracking-tight hidden sm:block">Kitchen Ops</span>
+ </div>
+ 
+ {/* Mini RSVP Toggle */}
+ {role === 'staff' && (
+   <Pressable
+     onClick={async () => {
+       const nextExempted = !sharedConfig?.config?.cutoffExempted;
+       const nextConfig = { ...sharedConfig?.config, cutoffExempted: nextExempted };
+       const success = await updateSharedConfig(nextConfig, 'admin');
+       if (success) {
+         addToast(nextExempted ? "RSVP blocked" : "RSVP opened", "success");
+       } else {
+         addToast("Failed to update RSVP status", "error");
+       }
+     }}
+     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border shadow-sm transition-all text-[10px] font-bold h-9 ${
+       sharedConfig?.config?.cutoffExempted 
+         ? 'bg-rose-50 border-rose-200 text-rose-700 dark:bg-rose-950/40 dark:border-rose-900/50 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/60' 
+         : 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-950/40 dark:border-emerald-900/50 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/60'
+     }`}
+     title="Toggle RSVP Cutoff"
+   >
+     {sharedConfig?.config?.cutoffExempted ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+     <span className="hidden sm:inline whitespace-nowrap">{sharedConfig?.config?.cutoffExempted ? 'RSVP Closed' : 'RSVP Open'}</span>
+   </Pressable>
+ )}
  </div>
 
  {/* Global Search Bar */}
@@ -536,8 +548,6 @@ export default function App() {
        type="text"
        value={globalSearchQuery}
        onChange={(e) => setGlobalSearchQuery(e.target.value)}
-       onFocus={() => setIsSearchFocused(true)}
-       onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
        placeholder="Search inventory, suppliers, or past orders..."
        className="w-full h-10 md:h-11 bg-white/95 dark:bg-[#121212]/95 backdrop-blur-md rounded-full border border-gray-200 dark:border-gray-800 pl-10 pr-4 text-sm focus:outline-none focus:border-[#16321F] dark:focus:border-[#D9E96B] focus:ring-1 focus:ring-[#16321F] dark:focus:ring-[#D9E96B] shadow-sm transition-all text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
      />
@@ -579,7 +589,7 @@ export default function App() {
                  </div>
                ))
              ) : (
-               <div className="px-3 py-4 text-center text-sm text-gray-500">No results found for "{globalSearchQuery}"</div>
+               <div className="px-3 py-4 text-center text-sm text-gray-500">We couldn\'t find anything matching "{globalSearchQuery}". Try adjusting your search.</div>
              )}
            </div>
            <div className="p-2">
@@ -605,9 +615,9 @@ export default function App() {
  <div className="pointer-events-auto bg-[#16321F] dark:bg-[#1a1a1a] border border-gray-900 dark:border-gray-800 rounded-full p-1 flex items-center gap-1 shadow-md shrink-0">
    {role === 'staff' || role === 'student' ? (
      <div className="relative">
-       <button 
+       <Pressable 
          type="button"
-         onClick={() => { triggerHaptic('light'); setShowNotifications(true); }}
+         onClick={() => { setShowNotifications(true); }}
          className="w-9 h-9 rounded-full text-white hover:bg-white/10 flex items-center justify-center transition-colors relative"
          title="Notifications"
        >
@@ -615,34 +625,33 @@ export default function App() {
          {(role === 'staff' && lowStockCount > 0) || (role === 'student') ? (
            <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#16321F] dark:border-[#1a1a1a]"></span>
          ) : null}
-       </button>
+       </Pressable>
      </div>
    ) : null}
-   <button 
+   <Pressable 
      type="button"
-     onClick={() => triggerHaptic('light')}
      className="w-9 h-9 rounded-full text-white hover:bg-white/10 flex items-center justify-center transition-colors"
    >
      <Menu className="w-5 h-5" />
-   </button>
+   </Pressable>
 
-   <button
+   <Pressable
      type="button"
-     onClick={() => { triggerHaptic('light'); setIsDarkMode(!isDarkMode); }}
+     onClick={() => { setIsDarkMode(!isDarkMode); }}
      className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"
      title="Toggle Dark Mode"
    >
      {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-   </button>
+   </Pressable>
 
-   <button
+   <Pressable
      type="button"
      onClick={handleSignOut}
      className="w-10 h-10 rounded-full bg-[#D9E96B] text-[#16321F] flex items-center justify-center font-bold text-sm cursor-pointer shadow-sm hover:scale-105 transition-transform"
      title="Sign Out / Switch Role"
    >
      {role === 'student' ? 'UP' : 'SP'}
-   </button>
+   </Pressable>
  </div>
  </div>
  </div>
@@ -659,7 +668,7 @@ export default function App() {
      selectedDate={selectedDate}
      onDateChange={setSelectedDate}
      title={role === 'staff' ? (
-       staffTab === 'settings' ? 'Global Settings' :
+       
        staffTab === 'dashboard' ? 'Operations Center' :
        staffTab === 'ops' ? 'Kitchen Ops & Trackers' :
        staffTab === 'stock' ? 'Supplier Reorders' :
@@ -674,17 +683,17 @@ export default function App() {
  <Clock className="w-4 h-4 fill-[#16321F] text-[#D9E96B]" />
  <span className="text-xs font-bold ">RSVP closes in 45 mins</span>
  </div>
- )}
+  )}
 
  
  {role === 'student' ? (
  <AnimatePresence mode="wait">
  <motion.div 
  key={studentTab}
- initial={{ opacity: 0, y: 10, filter: 'blur(4px)' }}
- animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
- exit={{ opacity: 0, y: -10, filter: 'blur(4px)' }}
- transition={{ duration: 0.25, ease: 'easeOut' }}
+ initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 10, filter: 'blur(4px)' }}
+ animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, y: 0, filter: 'blur(0px)' }}
+ exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -10, filter: 'blur(4px)' }}
+ transition={{ duration: shouldReduceMotion ? 0 : 0.25, ease: 'easeOut' }}
  >
  <ErrorBoundary fallbackMessage="Failed to load student view.">
  {studentTab === 'menu' && (
@@ -717,17 +726,16 @@ export default function App() {
  <AnimatePresence mode="wait">
  <motion.div 
  key={staffTab}
- initial={{ opacity: 0, y: 10, filter: 'blur(4px)' }}
- animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
- exit={{ opacity: 0, y: -10, filter: 'blur(4px)' }}
- transition={{ duration: 0.25, ease: 'easeOut' }}
+ initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 10, filter: 'blur(4px)' }}
+ animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, y: 0, filter: 'blur(0px)' }}
+ exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -10, filter: 'blur(4px)' }}
+ transition={{ duration: shouldReduceMotion ? 0 : 0.25, ease: 'easeOut' }}
  >
  <ErrorBoundary fallbackMessage="Failed to load staff view.">
  {staffTab === 'dashboard' && (
  <StaffDashboard
  activityLogs={activityLogs}
  pastOrders={pastOrders}
- onAddPastOrder={(o) => setPastOrders(p => [o, ...p])}
  onNavigate={setStaffTab}
  onDraftPO={(draftPO) => {
    setStaffTab('stock');
@@ -739,7 +747,6 @@ export default function App() {
  selectedDate={selectedDate}
  activeOrders={activeOrders}
  onReceiveOrder={handleReceiveOrder}
- onAddActivityLog={(log) => setActivityLogs(prev => [log, ...prev])}
  onLogWaste={handleStaffLogWaste}
  />
  )}
@@ -764,127 +771,93 @@ export default function App() {
           suppliers={suppliers}
  onTriggerReorder={handleTriggerReorder}
  onAddSupplier={handleAddSupplier}
- onAddActivityLog={(log) => setActivityLogs(prev => [log, ...prev])}
           initialDraftPO={initialDraftPO}
-          onClearInitialDraftPO={() => setInitialDraftPO(null)}
  />
  )}
  {staffTab === 'reports' && (
- <StaffReports efficiencyRecords={INITIAL_EFFICIENCY_RECORDS} optInCount={optInCount} prepItems={prepItems} suppliers={suppliers} activityLogs={activityLogs} isDarkMode={isDarkMode} />
+   <StaffReports efficiencyRecords={INITIAL_EFFICIENCY_RECORDS} optInCount={optInCount} prepItems={prepItems} suppliers={suppliers} activityLogs={activityLogs} isDarkMode={isDarkMode} />
  )}
  {staffTab === 'launch' && (
- <StaffLaunchHub />
+   <StaffLaunchHub />
  )}
- {staffTab === "management" && (
- <StaffManagement />
-  )}
-  {staffTab === "menu-builder" && (
-    <ManagerMenu />
+ {staffTab === 'management' && (
+   <StaffManagement />
  )}
- {staffTab === 'settings' && (
-   <ManagerSettings />
- )}
-
+ 
  </ErrorBoundary>
  </motion.div>
  </AnimatePresence>
  )}
  </main>
-
- {/* Bottom Nav Bar (Mobile Navigation) */}
- <nav className="fixed bottom-0 w-full z-40 bg-white/95 backdrop-blur-md border-t border-gray-100 shadow-sm flex justify-around items-center h-16 md:hidden">
- {role === 'student' ? (
- <>
- <button
- onClick={() => { triggerHaptic('light'); setStudentTab('menu'); }}
- className={`flex flex-col items-center justify-center flex-1 h-full py-1 transition-all active:scale-90`}
- >
- <div className={`p-1.5 rounded-full transition-all ${studentTab === 'menu' ? 'bg-[#16321F]/10 dark:bg-[#D9E96B]/10 text-[#16321F] dark:text-[#D9E96B]' : 'text-gray-400 dark:text-gray-600'}`}>
- <Utensils className="w-5 h-5" />
- </div>
- <span className={`text-xs mt-0.5 ${studentTab === 'menu' ? 'font-bold text-[#16321F] dark:text-[#D9E96B]' : 'font-medium text-gray-500'}`}>Menu</span>
- </button>
- <button
- onClick={() => { triggerHaptic('light'); setStudentTab('checkin'); }}
- className={`flex flex-col items-center justify-center flex-1 h-full py-1 transition-all active:scale-90`}
- >
- <div className={`p-1.5 rounded-full transition-all ${studentTab === 'checkin' ? 'bg-[#16321F]/10 dark:bg-[#D9E96B]/10 text-[#16321F] dark:text-[#D9E96B]' : 'text-gray-400 dark:text-gray-600'}`}>
- <ClipboardList className="w-5 h-5" />
- </div>
- <span className={`text-xs mt-0.5 ${studentTab === 'checkin' ? 'font-bold text-[#16321F] dark:text-[#D9E96B]' : 'font-medium text-gray-500'}`}>Check-in</span>
- </button>
- <button
- onClick={() => { triggerHaptic('light'); setStudentTab('profile'); }}
- className={`flex flex-col items-center justify-center flex-1 h-full py-1 transition-all active:scale-90`}
- >
- <div className={`p-1.5 rounded-full transition-all ${studentTab === 'profile' ? 'bg-[#16321F]/10 dark:bg-[#D9E96B]/10 text-[#16321F] dark:text-[#D9E96B]' : 'text-gray-400 dark:text-gray-600'}`}>
- <User className="w-5 h-5" />
- </div>
- <span className={`text-xs mt-0.5 ${studentTab === 'profile' ? 'font-bold text-[#16321F] dark:text-[#D9E96B]' : 'font-medium text-gray-500'}`}>Profile</span>
- </button>
- </>
- ) : (
- <>
- <button
- onClick={() => { triggerHaptic('light'); setStaffTab('dashboard'); }}
- className={`flex flex-col items-center justify-center flex-1 h-full py-1 transition-all active:scale-90`}
- >
- <div className={`p-1.5 rounded-full transition-all ${staffTab === 'dashboard' ? 'bg-[#16321F]/10 dark:bg-[#D9E96B]/10 text-[#16321F] dark:text-[#D9E96B]' : 'text-gray-400 dark:text-gray-600'}`}>
- <Users className="w-5 h-5" />
- </div>
- <span className={`text-xs mt-0.5 ${staffTab === 'dashboard' ? 'font-bold text-[#16321F] dark:text-[#D9E96B]' : 'font-medium text-gray-500'}`}>Ops</span>
- </button>
- <button
- onClick={() => { triggerHaptic('light'); setStaffTab('ops'); }}
- className={`flex flex-col items-center justify-center flex-1 h-full py-1 transition-all active:scale-90`}
- >
- <div className={`p-1.5 rounded-full transition-all ${staffTab === 'ops' ? 'bg-[#16321F]/10 dark:bg-[#D9E96B]/10 text-[#16321F] dark:text-[#D9E96B]' : 'text-gray-400 dark:text-gray-600'}`}>
- <ChefHat className="w-5 h-5" />
- </div>
- <span className={`text-xs mt-0.5 ${staffTab === 'ops' ? 'font-bold text-[#16321F] dark:text-[#D9E96B]' : 'font-medium text-gray-500'}`}>Prep</span>
- </button>
- <button
- onClick={() => { triggerHaptic('light'); setStaffTab('stock'); }}
- className={`flex flex-col items-center justify-center flex-1 h-full py-1 transition-all active:scale-90 relative`}
- >
- <div className={`p-1.5 rounded-full transition-all relative ${staffTab === 'stock' ? 'bg-[#16321F]/10 dark:bg-[#D9E96B]/10 text-[#16321F] dark:text-[#D9E96B]' : 'text-gray-400 dark:text-gray-600'}`}>
- <Package className="w-5 h-5" />
- {lowStockCount > 0 && (
-  <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-[#0A170E] animate-pulse"></div>
- )}
- </div>
- <span className={`text-xs mt-0.5 ${staffTab === 'stock' ? 'font-bold text-[#16321F] dark:text-[#D9E96B]' : 'font-medium text-gray-500'}`}>Stock</span>
- </button>
- <button
- onClick={() => { triggerHaptic('light'); setStaffTab('reports'); }}
- className={`flex flex-col items-center justify-center flex-1 h-full py-1 transition-all active:scale-90`}
- >
- <div className={`p-1.5 rounded-full transition-all ${staffTab === 'reports' ? 'bg-[#16321F]/10 dark:bg-[#D9E96B]/10 text-[#16321F] dark:text-[#D9E96B]' : 'text-gray-400 dark:text-gray-600'}`}>
- <BarChart2 className="w-5 h-5" />
- </div>
- <span className={`text-xs mt-0.5 ${staffTab === 'reports' ? 'font-bold text-[#16321F] dark:text-[#D9E96B]' : 'font-medium text-gray-500'}`}>Reports</span>
- </button>
- <button
- onClick={() => { triggerHaptic('light'); setStaffTab('launch'); }}
- className={`flex flex-col items-center justify-center flex-1 h-full py-1 transition-all active:scale-90`}
- >
- <div className={`p-1.5 rounded-full transition-all ${staffTab === 'launch' ? 'bg-amber-100 text-amber-600' : 'text-[#D9E96B]/80'}`}>
- <Rocket className={`w-5 h-5 ${staffTab === 'launch' ? 'animate-pulse' : ''}`} />
- </div>
- <span className={`text-xs mt-0.5 ${staffTab === 'launch' ? 'font-bold text-amber-600' : 'font-medium text-gray-500'}`}>Launch</span>
- </button>
- {role === "manager" && (
- <button
- onClick={() => { triggerHaptic("light"); setStaffTab("management"); }}
- className={`flex flex-col items-center justify-center flex-1 h-full py-1 transition-all active:scale-90`}
- >
- <div className={`p-1.5 rounded-full transition-all ${staffTab === "management" ? "bg-[#16321F]/10 dark:bg-[#D9E96B]/10 text-[#16321F] dark:text-[#D9E96B]" : "text-gray-400 dark:text-gray-600"}`}>
- <Shield className="w-5 h-5" />
- </div>
- <span className={`text-xs mt-0.5 ${staffTab === "management" ? "font-bold text-[#16321F] dark:text-[#D9E96B]" : "font-medium text-gray-500"}`}>Manage</span>
- </button>
- )}
- </>
+ <nav className="fixed bottom-0 w-full z-40 bg-white/95 dark:bg-[#121212]/95 backdrop-blur-md border-t border-gray-100 dark:border-gray-800 shadow-sm flex justify-around items-center h-[calc(4rem+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)] md:hidden">
+        {role === 'student' ? (
+          <>
+            <Pressable onClick={() => { setStudentTab('menu'); }} className={`flex flex-col items-center justify-center flex-1 h-full py-1 transition-all active:scale-90`}>
+              <div className={`p-1.5 rounded-full transition-all ${studentTab === 'menu' ? 'bg-[#16321F]/10 dark:bg-[#D9E96B]/10 text-[#16321F] dark:text-[#D9E96B]' : 'text-gray-400 dark:text-gray-600'}`}>
+                <Utensils className="w-5 h-5" />
+              </div>
+              <span className={`text-xs mt-0.5 ${studentTab === 'menu' ? 'font-bold text-[#16321F] dark:text-[#D9E96B]' : 'font-medium text-gray-500'}`}>Menu</span>
+            </Pressable>
+            <Pressable onClick={() => { setStudentTab('checkin'); }} className={`flex flex-col items-center justify-center flex-1 h-full py-1 transition-all active:scale-90`}>
+              <div className={`p-1.5 rounded-full transition-all ${studentTab === 'checkin' ? 'bg-[#16321F]/10 dark:bg-[#D9E96B]/10 text-[#16321F] dark:text-[#D9E96B]' : 'text-gray-400 dark:text-gray-600'}`}>
+                <ClipboardList className="w-5 h-5" />
+              </div>
+              <span className={`text-xs mt-0.5 ${studentTab === 'checkin' ? 'font-bold text-[#16321F] dark:text-[#D9E96B]' : 'font-medium text-gray-500'}`}>Check-in</span>
+            </Pressable>
+            <Pressable onClick={() => { setStudentTab('profile'); }} className={`flex flex-col items-center justify-center flex-1 h-full py-1 transition-all active:scale-90`}>
+              <div className={`p-1.5 rounded-full transition-all ${studentTab === 'profile' ? 'bg-[#16321F]/10 dark:bg-[#D9E96B]/10 text-[#16321F] dark:text-[#D9E96B]' : 'text-gray-400 dark:text-gray-600'}`}>
+                <User className="w-5 h-5" />
+              </div>
+              <span className={`text-xs mt-0.5 ${studentTab === 'profile' ? 'font-bold text-[#16321F] dark:text-[#D9E96B]' : 'font-medium text-gray-500'}`}>Profile</span>
+            </Pressable>
+          </>
+        ) : (
+          <>
+            <Pressable onClick={() => { setStaffTab('dashboard'); }} className={`flex flex-col items-center justify-center flex-1 h-full py-1 transition-all active:scale-90`}>
+              <div className={`p-1.5 rounded-full transition-all ${staffTab === 'dashboard' ? 'bg-[#16321F]/10 dark:bg-[#D9E96B]/10 text-[#16321F] dark:text-[#D9E96B]' : 'text-gray-400 dark:text-gray-600'}`}>
+                <Users className="w-5 h-5" />
+              </div>
+              <span className={`text-xs mt-0.5 ${staffTab === 'dashboard' ? 'font-bold text-[#16321F] dark:text-[#D9E96B]' : 'font-medium text-gray-500'}`}>Ops</span>
+            </Pressable>
+            <Pressable onClick={() => { setStaffTab('ops'); }} className={`flex flex-col items-center justify-center flex-1 h-full py-1 transition-all active:scale-90`}>
+              <div className={`p-1.5 rounded-full transition-all ${staffTab === 'ops' ? 'bg-[#16321F]/10 dark:bg-[#D9E96B]/10 text-[#16321F] dark:text-[#D9E96B]' : 'text-gray-400 dark:text-gray-600'}`}>
+                <ChefHat className="w-5 h-5" />
+              </div>
+              <span className={`text-xs mt-0.5 ${staffTab === 'ops' ? 'font-bold text-[#16321F] dark:text-[#D9E96B]' : 'font-medium text-gray-500'}`}>Prep</span>
+            </Pressable>
+            <Pressable onClick={() => { setStaffTab('stock'); }} className={`flex flex-col items-center justify-center flex-1 h-full py-1 transition-all active:scale-90 relative`}>
+              <div className={`p-1.5 rounded-full transition-all relative ${staffTab === 'stock' ? 'bg-[#16321F]/10 dark:bg-[#D9E96B]/10 text-[#16321F] dark:text-[#D9E96B]' : 'text-gray-400 dark:text-gray-600'}`}>
+                <Package className="w-5 h-5" />
+                {lowStockCount > 0 && (
+                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-[#0A170E] animate-pulse"></div>
+                )}
+              </div>
+              <span className={`text-xs mt-0.5 ${staffTab === 'stock' ? 'font-bold text-[#16321F] dark:text-[#D9E96B]' : 'font-medium text-gray-500'}`}>Stock</span>
+            </Pressable>
+            <Pressable onClick={() => { setStaffTab('reports'); }} className={`flex flex-col items-center justify-center flex-1 h-full py-1 transition-all active:scale-90`}>
+              <div className={`p-1.5 rounded-full transition-all ${staffTab === 'reports' ? 'bg-[#16321F]/10 dark:bg-[#D9E96B]/10 text-[#16321F] dark:text-[#D9E96B]' : 'text-gray-400 dark:text-gray-600'}`}>
+                <BarChart2 className="w-5 h-5" />
+              </div>
+              <span className={`text-xs mt-0.5 ${staffTab === 'reports' ? 'font-bold text-[#16321F] dark:text-[#D9E96B]' : 'font-medium text-gray-500'}`}>Reports</span>
+            </Pressable>
+            <Pressable onClick={() => { setStaffTab('launch'); }} className={`flex flex-col items-center justify-center flex-1 h-full py-1 transition-all active:scale-90`}>
+              <div className={`p-1.5 rounded-full transition-all ${staffTab === 'launch' ? 'bg-amber-100 text-amber-600' : 'text-[#D9E96B]/80'}`}>
+                <Rocket className={`w-5 h-5 ${staffTab === 'launch' ? 'animate-pulse' : ''}`} />
+              </div>
+              <span className={`text-xs mt-0.5 ${staffTab === 'launch' ? 'font-bold text-amber-600' : 'font-medium text-gray-500'}`}>Launch</span>
+            </Pressable>
+            {role === "manager" && (
+              <>
+                <Pressable onClick={() => { setStaffTab('management'); }} className={`flex flex-col items-center justify-center flex-1 h-full py-1 transition-all active:scale-90`}>
+                  <div className={`p-1.5 rounded-full transition-all ${staffTab === "management" ? "bg-[#16321F]/10 dark:bg-[#D9E96B]/10 text-[#16321F] dark:text-[#D9E96B]" : "text-gray-400 dark:text-gray-600"}`}>
+                    <Shield className="w-5 h-5" />
+                  </div>
+                  <span className={`text-xs mt-0.5 ${staffTab === "management" ? "font-bold text-[#16321F] dark:text-[#D9E96B]" : "font-medium text-gray-500"}`}>Manager Hub</span>
+                </Pressable>
+                
+              </>
+            )}
+          </>
         )}
       </nav>
       </div>

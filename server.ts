@@ -33,7 +33,7 @@ import multer from 'multer';
 // ----------------------------------------------------
 interface LogItem {
   timestamp: string;
-  module: 'HTTP' | 'DATABASE' | 'QUEUE' | 'SYSTEM' | 'ERROR';
+  module: 'HTTP' | 'DATABASE' | 'QUEUE' | 'SYSTEM' | 'ERROR' | 'AUTH';
   message: string;
   isError?: boolean;
 }
@@ -976,7 +976,7 @@ app.get('/api/recipe-insights', async (req, res) => {
 app.get('/api/expiry-insights', async (req, res) => {
   try {
     const { date } = req.query; // e.g. 2026-07-18
-    const currentDateStr = date || new Date().toISOString().split('T')[0];
+    const currentDateStr = (date as string) || new Date().toISOString().split('T')[0];
     const currentDate = new Date(currentDateStr);
     
     // Lookahead window: 7 days

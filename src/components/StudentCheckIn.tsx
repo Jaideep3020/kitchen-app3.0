@@ -1,3 +1,4 @@
+import { Pressable } from './Pressable';
 import React, { useState } from 'react';
 import { Clipboard, Check, Scale, Camera, QrCode } from 'lucide-react';
 import { MenuItem } from '../types';
@@ -110,7 +111,7 @@ export default function StudentCheckIn({ menuItems, onLogPlateWaste }: StudentCh
             </div>
             <p className="text-white font-medium text-sm mb-1">Camera Unavailable</p>
             <p className="text-gray-400 text-xs mb-4">{cameraError}</p>
-            <button type="button" onClick={() => { stopScanner(); triggerHaptic('success'); setSelectedDish(menuItems[0]?.id || ''); }} className="bg-[#D9E96B] text-[#16321F] px-4 py-2 rounded-full text-xs font-bold shadow-md">Simulate Scan Instead</button>
+            <Pressable type="button" onClick={() => { stopScanner(); triggerHaptic('success'); setSelectedDish(menuItems[0]?.id || ''); }} className="bg-[#D9E96B] text-[#16321F] px-4 py-2 rounded-full text-xs font-bold shadow-md">Simulate Scan Instead</Pressable>
           </div>
         ) : (
           <>
@@ -119,18 +120,18 @@ export default function StudentCheckIn({ menuItems, onLogPlateWaste }: StudentCh
               <div className="w-48 h-48 border-2 border-[#D9E96B] rounded-xl"></div>
             </div>
             <div className="absolute bottom-4 left-0 right-0 flex justify-center z-10">
-               <button type="button" onClick={() => { stopScanner(); triggerHaptic('success'); setSelectedDish(menuItems[0]?.id || ''); }} className="bg-[#D9E96B] text-[#16321F] px-4 py-2 rounded-full text-xs font-bold shadow-md">Simulate Scan Success</button>
+               <Pressable type="button" onClick={() => { stopScanner(); triggerHaptic('success'); setSelectedDish(menuItems[0]?.id || ''); }} className="bg-[#D9E96B] text-[#16321F] px-4 py-2 rounded-full text-xs font-bold shadow-md">Simulate Scan Success</Pressable>
             </div>
           </>
         )}
-        <button type="button" onClick={stopScanner} className="absolute top-4 right-4 bg-white/20 backdrop-blur-md rounded-full p-2 text-white z-20"><Check className="w-4 h-4 opacity-0" />Close</button>
+        <Pressable type="button" onClick={stopScanner} className="absolute top-4 right-4 bg-white/20 backdrop-blur-md rounded-full p-2 text-white z-20"><Check className="w-4 h-4 opacity-0" />Close</Pressable>
       </div>
     ) : (
       <div className="mb-6 flex justify-center">
-         <button type="button" onClick={startScanner} className="w-full bg-[#16321F]/5 border border-[#16321F]/10 text-[#16321F] font-bold py-4 rounded-[20px] flex items-center justify-center gap-2 hover:bg-[#16321F]/10 transition-colors">
+         <Pressable type="button" onClick={startScanner} className="w-full bg-[#16321F]/5 border border-[#16321F]/10 text-[#16321F] font-bold py-4 rounded-[20px] flex items-center justify-center gap-2 hover:bg-[#16321F]/10 transition-colors">
             <QrCode className="w-5 h-5" />
             Tap to Scan Meal Ticket / ID
-         </button>
+         </Pressable>
       </div>
     )}
 
@@ -141,7 +142,7 @@ export default function StudentCheckIn({ menuItems, onLogPlateWaste }: StudentCh
  </label>
  <div className="grid grid-cols-1 gap-2">
  {menuItems.map((dish) => (
- <button
+ <Pressable
  key={dish.id}
  type="button"
  onClick={() => setSelectedDish(dish.id)}
@@ -153,7 +154,7 @@ export default function StudentCheckIn({ menuItems, onLogPlateWaste }: StudentCh
  >
  <span className="text-sm">{dish.name}</span>
  <span className="text-xs text-gray-400 capitalize">{dish.category.replace('_', ' ')}</span>
- </button>
+ </Pressable>
  ))}
  </div>
  </div>
@@ -167,7 +168,7 @@ export default function StudentCheckIn({ menuItems, onLogPlateWaste }: StudentCh
  {levels.map((level) => {
  const isSelected = wasteLevel === level.value;
  return (
- <button
+ <Pressable
  key={level.value}
  type="button"
  onClick={() => setWasteLevel(level.value as any)}
@@ -182,20 +183,20 @@ export default function StudentCheckIn({ menuItems, onLogPlateWaste }: StudentCh
  {isSelected && <Check className="w-4 h-4 text-current" />}
  </div>
  <span className="text-xs text-gray-500 mt-1 font-normal">{level.desc}</span>
- </button>
+ </Pressable>
  );
  })}
  </div>
  </div>
 
  {/* Submit Button */}
- <button
+ <Pressable
  type="submit"
  className="w-full h-11 bg-[#16321F] hover:bg-[#4a7c59] text-white font-semibold rounded-[20px] transition-all flex items-center justify-center gap-2 active:scale-[0.98] mt-6 shadow-sm"
  >
  <Scale className="w-5 h-5" />
  Log Plate Waste
- </button>
+ </Pressable>
  </form>
  )}
  </div>

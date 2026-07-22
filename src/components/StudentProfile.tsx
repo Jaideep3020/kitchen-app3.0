@@ -1,3 +1,4 @@
+import { Pressable } from './Pressable';
 import React from 'react';
 import { User, LogOut, Flame, Sparkles, Award, ShieldAlert } from 'lucide-react';
 
@@ -155,13 +156,13 @@ export default function StudentProfile({ onSignOut, optInCount, email = 'student
 
  {/* Settings Options & Sign Out */}
  <div className="space-y-3">
- <button
+ <Pressable
  onClick={onSignOut}
  className="w-full h-11 bg-red-50 hover:bg-red-100 text-red-600 font-bold rounded-[20px] transition-all flex items-center justify-center gap-2 active:scale-[0.98] border border-red-100 shadow-sm"
  >
  <LogOut className="w-5 h-5" />
  Sign Out / Change User Role
- </button>
+ </Pressable>
  </div>
  </div>
  );

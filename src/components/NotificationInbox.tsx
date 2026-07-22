@@ -1,4 +1,6 @@
+import { Pressable } from './Pressable';
 import React, { useState } from 'react';
+import FocusTrap from 'focus-trap-react';
 import { Bell, X, AlertTriangle, AlertCircle, ShoppingCart, Truck, Wrench } from 'lucide-react';
 import { InventoryItem } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -118,11 +120,12 @@ export default function NotificationInbox({ isOpen, onClose, prepItems, onNaviga
   if (!isOpen) return null;
 
   return (
-    <>
-      <div 
-        className="fixed inset-0 z-[60] bg-black/20 backdrop-blur-sm"
-        onClick={onClose}
-      />
+    <FocusTrap>
+      <div>
+        <div 
+          className="fixed inset-0 z-[60] bg-black/20 backdrop-blur-sm"
+          onClick={onClose}
+        />
       <motion.div 
         initial={{ opacity: 0, scale: 0.95, y: -20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -139,15 +142,15 @@ export default function NotificationInbox({ isOpen, onClose, prepItems, onNaviga
               </span>
             )}
           </h3>
-          <button onClick={onClose} className="p-1.5 bg-gray-100 dark:bg-[#222] hover:bg-gray-200 dark:hover:bg-[#333] rounded-full text-gray-500 transition-colors">
+          <Pressable onClick={onClose} className="p-1.5 bg-gray-100 dark:bg-[#222] hover:bg-gray-200 dark:hover:bg-[#333] rounded-full text-gray-500 transition-colors">
             <X className="w-4 h-4" />
-          </button>
+          </Pressable>
         </div>
 
-        <div className="px-4 pt-3 pb-2 border-b border-gray-100 dark:border-gray-800 overflow-x-auto hide-scrollbar shrink-0">
+        <div className="px-4 pt-3 pb-2 border-b border-gray-100 dark:border-gray-800 overflow-x-auto hide-scrollbar shrink-0 snap-x snap-mandatory touch-pan-x">
           <div className="flex gap-2 min-w-max">
             {categories.map(cat => (
-              <button
+              <Pressable
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
                 className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${
@@ -162,7 +165,7 @@ export default function NotificationInbox({ isOpen, onClose, prepItems, onNaviga
                     ({allNotifications.filter(n => n.category === cat).length})
                   </span>
                 )}
-              </button>
+              </Pressable>
             ))}
           </div>
         </div>
@@ -194,13 +197,13 @@ export default function NotificationInbox({ isOpen, onClose, prepItems, onNaviga
                       {item.message}
                     </p>
                     {item.actionText && item.onAction && (
-                      <button 
+                      <Pressable 
                         onClick={item.onAction}
                         className="bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-700 hover:border-[#16321F] dark:hover:border-[#D9E96B] text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-colors"
                       >
                         {item.category === 'Inventory' ? <ShoppingCart className="w-3.5 h-3.5" /> : null}
                         {item.actionText}
-                      </button>
+                      </Pressable>
                     )}
                   </div>
                 </div>
@@ -209,6 +212,7 @@ export default function NotificationInbox({ isOpen, onClose, prepItems, onNaviga
           )}
         </div>
       </motion.div>
-    </>
+      </div>
+    </FocusTrap>
   );
 }

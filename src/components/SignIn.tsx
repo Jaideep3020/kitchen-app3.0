@@ -126,13 +126,13 @@ export default function SignIn({ onSignIn }: SignInProps) {
                   placeholder="••••••••"
                   className="w-full pl-11 pr-12 py-3.5 bg-white border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-[#1c3422]/10 focus:border-[#1c3422] transition-all placeholder:text-gray-400 text-gray-900"
                 />
-                <button
+                <Pressable
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
+                </Pressable>
               </div>
             </div>
 
@@ -142,7 +142,7 @@ export default function SignIn({ onSignIn }: SignInProps) {
                 Select Role
               </label>
               <div className="grid grid-cols-3 gap-3">
-                <button
+                <Pressable
                   type="button"
                   onClick={() => setSelectedRole('student')}
                   className={`flex flex-col items-center justify-center py-4 rounded-2xl border transition-all ${
@@ -153,8 +153,8 @@ export default function SignIn({ onSignIn }: SignInProps) {
                 >
                   <User className="w-6 h-6 mb-2" />
                   <span className={`text-sm ${selectedRole === 'student' ? 'font-bold' : 'font-medium'}`}>Student</span>
-                </button>
-                <button
+                </Pressable>
+                <Pressable
                   type="button"
                   onClick={() => setSelectedRole('staff')}
                   className={`flex flex-col items-center justify-center py-4 rounded-2xl border transition-all ${
@@ -165,8 +165,8 @@ export default function SignIn({ onSignIn }: SignInProps) {
                 >
                   <Utensils className="w-6 h-6 mb-2" />
                   <span className={`text-sm ${selectedRole === 'staff' ? 'font-bold' : 'font-medium'}`}>Staff</span>
-                </button>
-                <button
+                </Pressable>
+                <Pressable
                   type="button"
                   onClick={() => setSelectedRole('manager')}
                   className={`flex flex-col items-center justify-center py-4 rounded-2xl border transition-all ${
@@ -177,18 +177,18 @@ export default function SignIn({ onSignIn }: SignInProps) {
                 >
                   <Lock className="w-6 h-6 mb-2" />
                   <span className={`text-sm ${selectedRole === 'manager' ? 'font-bold' : 'font-medium'}`}>Manager</span>
-                </button>
+                </Pressable>
               </div>
             </div>
 
             {/* Submit Button */}
-            <button
+            <Pressable
               type="submit"
               className="w-full bg-[#1c3422] hover:bg-[#2a4d33] text-white font-bold py-4 rounded-2xl transition-all flex justify-center items-center gap-2 mt-4 active:scale-[0.98] shadow-md"
             >
               Sign In
               <ArrowRight className="w-5 h-5" />
-            </button>
+            </Pressable>
           </form>
         </div>
       </div>

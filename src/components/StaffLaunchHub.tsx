@@ -1,3 +1,4 @@
+import { Pressable } from './Pressable';
 import React, { useState } from 'react';
 import { 
  Rocket, Users, HelpCircle, CheckSquare, Square, 
@@ -105,7 +106,7 @@ export default function StaffLaunchHub() {
 
  <div className="space-y-4">
  {checklist.map((item) => (
- <button
+ <Pressable
  key={item.id}
  onClick={() => toggleChecklist(item.id)}
  className={`w-full text-left p-4 rounded-[20px] border transition-all flex items-start gap-3 select-none hover:bg-gray-50/50 dark:bg-[#1a1a1a]/80 ${
@@ -129,7 +130,7 @@ export default function StaffLaunchHub() {
  Target Audience: {item.category}
  </span>
  </div>
- </button>
+ </Pressable>
  ))}
  </div>
  </div>
@@ -165,23 +166,23 @@ export default function StaffLaunchHub() {
  </div>
 
  {/* Central Play Button */}
- <button className="relative z-10 self-center w-14 h-14 rounded-full bg-amber-500 hover:bg-amber-400 text-[#16321F] dark:text-[#D9E96B] flex items-center justify-center shadow-sm transition-transform hover:scale-115 active:scale-95 cursor-pointer">
+ <Pressable className="relative z-10 self-center w-14 h-14 rounded-full bg-amber-500 hover:bg-amber-400 text-[#16321F] dark:text-[#D9E96B] flex items-center justify-center shadow-sm transition-transform hover:scale-115 active:scale-95 cursor-pointer">
  <Play className="w-6 h-6 fill-current ml-0.5" />
- </button>
+ </Pressable>
 
  <div className="relative z-10 text-left">
  </div>
  </div>
 
  <div className="flex flex-col sm:flex-row gap-3 pt-2">
- <button className="flex-1 h-11 bg-white dark:bg-[#121212] hover:bg-gray-50 dark:bg-[#1a1a1a] text-[#0A170E] dark:text-white font-bold rounded-[20px] text-xs flex items-center justify-center gap-2 transition-all cursor-pointer">
+ <Pressable className="flex-1 h-11 bg-white dark:bg-[#121212] hover:bg-gray-50 dark:bg-[#1a1a1a] text-[#0A170E] dark:text-white font-bold rounded-[20px] text-xs flex items-center justify-center gap-2 transition-all cursor-pointer">
  <Download className="w-4 h-4 text-emerald-800" />
  Download Promo Video
- </button>
- <button className="flex-1 h-11 bg-emerald-800 hover:bg-emerald-700 text-white font-bold rounded-[20px] text-xs flex items-center justify-center gap-2 transition-all cursor-pointer border border-emerald-700">
+ </Pressable>
+ <Pressable className="flex-1 h-11 bg-emerald-800 hover:bg-emerald-700 text-white font-bold rounded-[20px] text-xs flex items-center justify-center gap-2 transition-all cursor-pointer border border-emerald-700">
  <Share2 className="w-4 h-4" />
  Share Screenshots Kit
- </button>
+ </Pressable>
  </div>
  </div>
  </div>
@@ -216,7 +217,7 @@ export default function StaffLaunchHub() {
  {/* Quick interactive simulation trigger */}
  <div className="bg-white/50 dark:bg-black/50 border border-gray-100 dark:border-gray-800 rounded-[20px] p-3 flex justify-between items-center text-xs">
  <span className="text-gray-500 dark:text-gray-400 dark:text-gray-400 font-semibold leading-tight">Got mock survey responses?</span>
- <button 
+ <Pressable 
  onClick={() => {
  setPilotAccuracy(Math.min(99, pilotAccuracy + 1));
  setPlateWasteReduced(Math.min(35, plateWasteReduced + 2));
@@ -226,7 +227,7 @@ export default function StaffLaunchHub() {
  >
  <RefreshCw className="w-3 h-3" />
  Ingest
- </button>
+ </Pressable>
  </div>
  </div>
 
@@ -269,10 +270,10 @@ export default function StaffLaunchHub() {
  <span className="text-xs font-bold text-emerald-800 mt-3">Scan to RSVP</span>
  </div>
 
- <button className="mt-4 w-full h-10 bg-gray-50 dark:bg-[#1a1a1a] border border-gray-100 dark:border-gray-800 text-gray-700 dark:text-gray-200 text-xs font-bold rounded-[20px] hover:bg-gray-100 dark:bg-[#222222] flex items-center justify-center gap-1.5 transition-colors">
+ <Pressable className="mt-4 w-full h-10 bg-gray-50 dark:bg-[#1a1a1a] border border-gray-100 dark:border-gray-800 text-gray-700 dark:text-gray-200 text-xs font-bold rounded-[20px] hover:bg-gray-100 dark:bg-[#222222] flex items-center justify-center gap-1.5 transition-colors">
  <Download className="w-4 h-4 text-emerald-800" />
  Download PDF Poster
- </button>
+ </Pressable>
  </div>
 
  {/* Feedback Collector / Logger */}
@@ -292,14 +293,14 @@ export default function StaffLaunchHub() {
  className="w-full px-3 py-2 text-xs border border-gray-200 dark:border-gray-700 rounded-[20px] focus:outline-none focus:ring-2 focus:ring-[#16321F]/25 focus:border-[#16321F] text-gray-900 dark:text-white placeholder:text-gray-400 dark:text-gray-400 bg-gray-50/20"
  />
  <div className="flex justify-end">
- <button
+ <Pressable
  type="submit"
  disabled={submittingFeedback || !newFeedbackText.trim()}
  className="h-9 px-4 bg-[#16321F] text-white text-xs font-bold rounded-[20px] hover:opacity-95 flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 cursor-pointer"
  >
  <Send className="w-3.5 h-3.5" />
  Log Feedback
- </button>
+ </Pressable>
  </div>
  </form>
 

@@ -37,7 +37,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <AlertTriangle className="w-6 h-6" />
           </div>
           <h3 className="text-gray-900 dark:text-white font-semibold mb-2">
-            {this.props.fallbackMessage || 'Something went wrong loading this component.'}
+            {this.props.fallbackMessage || 'This section couldn\'t be loaded. Try refreshing the page.'}
           </h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 max-w-[250px]">
             {this.state.error?.message || 'An unexpected error occurred.'}
