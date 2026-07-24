@@ -61,12 +61,20 @@
 }
 
 /* Hide scrollbars but keep functionality */
-.no-scrollbar::-webkit-scrollbar {
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 /* Glassmorphism custom styling helper */

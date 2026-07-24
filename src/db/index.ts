@@ -99,7 +99,7 @@ const SEED_RECIPES = [
 
 
 const generatedUsers = [
-  { id: 1, uid: "usr_mgr", name: "Main Manager", email: "manager@mess.edu", role: "manager", passwordHash: "$2b$10$diVGZ86I89n89BOeco9k2OLEE4k5RWLe.tJgmiu1ZLf20eDOoVGRG" }
+  { id: 1, uid: "usr_mgr", name: "Main Manager", email: "manager@mess.edu", role: "manager", orgId: "default-org", passwordHash: "$2b$10$wo39Q6hhOM6nmKFRcUoJr.NshCnnA/wUJxyOwaHWmfCw49ysGHmNm" }
 ];
 
 for (let i = 1; i <= 6; i++) {
@@ -109,7 +109,8 @@ for (let i = 1; i <= 6; i++) {
     name: "Staff Member " + i,
     email: "staff" + i + "@mess.edu",
     role: "staff",
-    passwordHash: "$2b$10$diVGZ86I89n89BOeco9k2OLEE4k5RWLe.tJgmiu1ZLf20eDOoVGRG"
+    orgId: "default-org",
+    passwordHash: "$2b$10$wo39Q6hhOM6nmKFRcUoJr.NshCnnA/wUJxyOwaHWmfCw49ysGHmNm"
   });
 }
 
@@ -126,22 +127,35 @@ for (let i = 1; i <= 50; i++) {
     name,
     email,
     role: "student",
-    passwordHash: "$2b$10$diVGZ86I89n89BOeco9k2OLEE4k5RWLe.tJgmiu1ZLf20eDOoVGRG"
+    orgId: "default-org",
+    passwordHash: "$2b$10$wo39Q6hhOM6nmKFRcUoJr.NshCnnA/wUJxyOwaHWmfCw49ysGHmNm"
   });
 }
 
 const mockStorage: Record<string, any[]> = {
   users: generatedUsers,
-  inventory_items: [...INITIAL_PREP_ITEMS],
+  inventory_items: [...INITIAL_PREP_ITEMS].map(i => ({ ...i, orgId: 'default-org' })),
   active_orders: [...INITIAL_ACTIVE_ORDERS],
   activity_logs: [...INITIAL_ACTIVITY_LOGS],
   suppliers: [...INITIAL_SUPPLIERS],
-  menu_items: [...INITIAL_MENU_ITEMS],
-  recipes: [...SEED_RECIPES],
+  menu_items: [...INITIAL_MENU_ITEMS].map(m => ({ ...m, orgId: 'default-org' })),
+  recipes: [...SEED_RECIPES].map(r => ({ ...r, orgId: 'default-org' })),
   issues: [],
+  meal_sessions: [],
+  menu_change_logs: [],
+  ingredient_yields: [],
+  reuse_pool: [],
   waste_logs: [],
   past_orders: [],
   prep_logs: [],
+  recipe_yields: [
+    { id: 1, menuItemId: 'mon_bf', ingredientId: 'grain_2', yieldRatio: '2.5' },
+    { id: 2, menuItemId: 'mon_lh', ingredientId: 'grain_1', yieldRatio: '3.0' },
+    { id: 3, menuItemId: 'mon_lh', ingredientId: 'grain_5', yieldRatio: '2.2' },
+    { id: 4, menuItemId: 'mon_dn', ingredientId: 'grain_4', yieldRatio: '2.8' },
+    { id: 5, menuItemId: 'tue_lh', ingredientId: 'grain_1', yieldRatio: '3.0' },
+    { id: 6, menuItemId: 'wed_lh', ingredientId: 'grain_1', yieldRatio: '3.0' }
+  ],
   staples: [],
   meal_headcounts: [],
   stock_transactions: [],

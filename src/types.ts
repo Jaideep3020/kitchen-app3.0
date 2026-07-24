@@ -1,7 +1,9 @@
 export type Role = 'student' | 'staff' | 'manager' | null;
+export type StaffSubRole = 'inventory' | 'prep_cook' | 'waste' | null;
 
-export type StudentTab = 'menu' | 'checkin' | 'profile';
+export type StudentTab = 'today' | 'profile';
 export type StaffTab = 'dashboard' | 'ops' | 'stock' | 'reports' | 'launch' | 'management' | 'settings';
+export type InventoryStaffTab = 'dashboard' | 'catalogue' | 'profile';
 
 export interface MenuItem {
   id: string;
@@ -13,6 +15,7 @@ export interface MenuItem {
   tags: string[];
   image: string;
   inStock: boolean;
+  isSpecial?: boolean;
   dayOfWeek?: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday';
 }
 
@@ -120,6 +123,32 @@ export interface UserAccount {
   name: string;
   email: string;
   role: 'manager' | 'staff' | 'student';
+  staffSubRole?: StaffSubRole;
   orgId: string;
   password?: string;
+}
+
+export interface InventoryAdjustment {
+  id: string | number;
+  orgId: string;
+  ingredientId: string;
+  type: 'stock_in' | 'correction';
+  qty: number;
+  reason?: string;
+  vendor?: string;
+  unitCost?: number;
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface RestockFlag {
+  id: string | number;
+  orgId: string;
+  ingredientId: string;
+  flaggedBy: string;
+  flaggedAt: string;
+  resolved: boolean;
+  resolvedAt?: string;
+  resolvedBy?: string;
+  notes?: string;
 }

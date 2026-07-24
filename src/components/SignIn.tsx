@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Utensils, User, Lock, Eye, EyeOff, ArrowRight, Mail } from 'lucide-react';
+import { Utensils, User, Lock, Eye, EyeOff, ArrowRight, Mail, Boxes } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { useToast } from '../contexts/ToastContext';
+import { Pressable } from './Pressable';
+import { DUMMY_USERS } from '../lib/dummyUsers';
 
 interface SignInProps {
-  onSignIn: (role: 'student' | 'staff' | 'manager', email: string) => void;
+  onSignIn: (role: 'student' | 'staff' | 'manager', email: string, staffSubRole?: string | null) => void;
 }
 
 export default function SignIn({ onSignIn }: SignInProps) {
@@ -13,7 +15,7 @@ export default function SignIn({ onSignIn }: SignInProps) {
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [selectedRole, setSelectedRole] = useState<'student' | 'staff' | 'manager'>('student');
+  const [selectedRole, setSelectedRole] = useState<'student' | 'staff' | 'inventory' | 'prep_cook' | 'manager'>('student');
   
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -26,6 +28,12 @@ export default function SignIn({ onSignIn }: SignInProps) {
     } else if (selectedRole === 'staff') {
       setEmail('staff1@mess.edu');
       setPassword('Test1234!');
+    } else if (selectedRole === 'inventory') {
+      setEmail('staff1@mess.edu');
+      setPassword('Test1234!');
+    } else if (selectedRole === 'prep_cook') {
+      setEmail('rohan.das.stf@gmail.com');
+      setPassword('TestPass123!');
     } else if (selectedRole === 'manager') {
       setEmail('manager@mess.edu');
       setPassword('Test1234!');
@@ -48,6 +56,25 @@ export default function SignIn({ onSignIn }: SignInProps) {
       });
 
       if (!res.ok) {
+        // Fallback check against DUMMY_USERS
+        const dummy = DUMMY_USERS.find(u => u.email.toLowerCase() === email.trim().toLowerCase());
+        if (dummy && dummy.password === password.trim()) {
+          const roleMatches = selectedRole === 'inventory' 
+            ? (dummy.role === 'staff' && (dummy.staffSubRole === 'inventory' || !dummy.staffSubRole))
+            : selectedRole === 'prep_cook'
+            ? (dummy.role === 'staff' && dummy.staffSubRole === 'prep_cook')
+            : dummy.role === selectedRole;
+
+          if (!roleMatches) {
+            setError(`This account does not have ${selectedRole === 'inventory' ? 'Inventory Staff' : selectedRole === 'prep_cook' ? 'Prep & Cook Staff' : selectedRole} access.`);
+            return;
+          }
+
+          const effectiveSubRole = dummy.staffSubRole || (selectedRole === 'inventory' ? 'inventory' : selectedRole === 'prep_cook' ? 'prep_cook' : null);
+          onSignIn(dummy.role as 'student' | 'staff' | 'manager', dummy.email, effectiveSubRole);
+          return;
+        }
+
         const data = await res.json().catch(() => ({}));
         setError(data.error || 'Invalid email or password');
         return;
@@ -56,12 +83,20 @@ export default function SignIn({ onSignIn }: SignInProps) {
       const data = await res.json();
       const user = data.user;
 
-      if (user.role !== selectedRole) {
-        setError(`This account does not have ${selectedRole} access.`);
+      const roleMatches = selectedRole === 'inventory'
+        ? (user.role === 'staff' && (user.staffSubRole === 'inventory' || !user.staffSubRole))
+        : selectedRole === 'prep_cook'
+        ? (user.role === 'staff' && user.staffSubRole === 'prep_cook')
+        : user.role === selectedRole;
+
+      if (!roleMatches) {
+        setError(`This account does not have ${selectedRole === 'inventory' ? 'Inventory Staff' : selectedRole === 'prep_cook' ? 'Prep & Cook Staff' : selectedRole} access.`);
         return;
       }
 
-      onSignIn(user.role as 'student' | 'staff' | 'manager', user.email);
+      const effectiveSubRole = user.staffSubRole || (selectedRole === 'inventory' ? 'inventory' : selectedRole === 'prep_cook' ? 'prep_cook' : null);
+
+      onSignIn(user.role as 'student' | 'staff' | 'manager', user.email, effectiveSubRole);
     } catch (err) {
       console.error(err);
       setError('An error occurred during sign in');
@@ -141,42 +176,70 @@ export default function SignIn({ onSignIn }: SignInProps) {
               <label className="block text-xs font-bold tracking-widest text-[#4e6a57] uppercase">
                 Select Role
               </label>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                 <Pressable
                   type="button"
                   onClick={() => setSelectedRole('student')}
-                  className={`flex flex-col items-center justify-center py-4 rounded-2xl border transition-all ${
+                  className={`flex flex-col items-center justify-center py-3 px-1 rounded-2xl border transition-all ${
                     selectedRole === 'student' 
                       ? 'bg-[#eff5f0] border-[#1c3422] text-[#1c3422] shadow-sm' 
                       : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
                   }`}
                 >
-                  <User className="w-6 h-6 mb-2" />
-                  <span className={`text-sm ${selectedRole === 'student' ? 'font-bold' : 'font-medium'}`}>Student</span>
+                  <User className="w-4 h-4 mb-1" />
+                  <span className={`text-[11px] ${selectedRole === 'student' ? 'font-bold' : 'font-medium'}`}>Student</span>
                 </Pressable>
+
                 <Pressable
                   type="button"
                   onClick={() => setSelectedRole('staff')}
-                  className={`flex flex-col items-center justify-center py-4 rounded-2xl border transition-all ${
+                  className={`flex flex-col items-center justify-center py-3 px-1 rounded-2xl border transition-all ${
                     selectedRole === 'staff' 
                       ? 'bg-[#eff5f0] border-[#1c3422] text-[#1c3422] shadow-sm' 
                       : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
                   }`}
                 >
-                  <Utensils className="w-6 h-6 mb-2" />
-                  <span className={`text-sm ${selectedRole === 'staff' ? 'font-bold' : 'font-medium'}`}>Staff</span>
+                  <Utensils className="w-4 h-4 mb-1" />
+                  <span className={`text-[11px] ${selectedRole === 'staff' ? 'font-bold' : 'font-medium'}`}>Staff</span>
                 </Pressable>
+
+                <Pressable
+                  type="button"
+                  onClick={() => setSelectedRole('inventory')}
+                  className={`flex flex-col items-center justify-center py-3 px-1 rounded-2xl border transition-all ${
+                    selectedRole === 'inventory' 
+                      ? 'bg-[#eff5f0] border-[#1c3422] text-[#1c3422] shadow-sm' 
+                      : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
+                  }`}
+                >
+                  <Boxes className="w-4 h-4 mb-1" />
+                  <span className={`text-[11px] text-center ${selectedRole === 'inventory' ? 'font-bold' : 'font-medium'}`}>Inventory</span>
+                </Pressable>
+
+                <Pressable
+                  type="button"
+                  onClick={() => setSelectedRole('prep_cook')}
+                  className={`flex flex-col items-center justify-center py-3 px-1 rounded-2xl border transition-all ${
+                    selectedRole === 'prep_cook' 
+                      ? 'bg-[#eff5f0] border-[#1c3422] text-[#1c3422] shadow-sm' 
+                      : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
+                  }`}
+                >
+                  <Utensils className="w-4 h-4 mb-1" />
+                  <span className={`text-[11px] text-center ${selectedRole === 'prep_cook' ? 'font-bold' : 'font-medium'}`}>Prep & Cook</span>
+                </Pressable>
+
                 <Pressable
                   type="button"
                   onClick={() => setSelectedRole('manager')}
-                  className={`flex flex-col items-center justify-center py-4 rounded-2xl border transition-all ${
+                  className={`flex flex-col items-center justify-center py-3 px-1 rounded-2xl border transition-all col-span-2 sm:col-span-1 ${
                     selectedRole === 'manager' 
                       ? 'bg-[#eff5f0] border-[#1c3422] text-[#1c3422] shadow-sm' 
                       : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
                   }`}
                 >
-                  <Lock className="w-6 h-6 mb-2" />
-                  <span className={`text-sm ${selectedRole === 'manager' ? 'font-bold' : 'font-medium'}`}>Manager</span>
+                  <Lock className="w-4 h-4 mb-1" />
+                  <span className={`text-[11px] ${selectedRole === 'manager' ? 'font-bold' : 'font-medium'}`}>Manager</span>
                 </Pressable>
               </div>
             </div>

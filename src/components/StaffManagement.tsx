@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import ManagerMenu from './ManagerMenu';
 import ScrollAffordance from './ScrollAffordance';
 import { triggerHaptic } from '../lib/haptics';
+import { Pressable } from './Pressable';
 
 export default function StaffManagement() {
   const { users, setUsers, menuItems } = useData();
@@ -19,6 +20,7 @@ export default function StaffManagement() {
     name: '',
     email: '',
     role: 'staff',
+    staffSubRole: 'inventory',
     orgId: 'org_001',
     password: ''
   });
@@ -79,7 +81,8 @@ export default function StaffManagement() {
     }
     const newUser: UserAccount = {
       ...formData,
-      role: formData.role as 'manager' | 'staff' | 'student'
+      role: formData.role as 'manager' | 'staff' | 'student',
+      staffSubRole: formData.role === 'staff' ? (formData.staffSubRole as any) : undefined
     };
     setUsers(prev => [...prev, newUser]);
     addToast(`Added new ${formData.role}: ${formData.name}`, 'success');
@@ -88,6 +91,7 @@ export default function StaffManagement() {
       name: '',
       email: '',
       role: 'staff',
+      staffSubRole: 'inventory',
       orgId: 'org_001',
       password: ''
     });
@@ -219,6 +223,20 @@ export default function StaffManagement() {
                         <option value="manager">Manager</option>
                       </select>
                     </div>
+                    {formData.role === 'staff' && (
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">Sub-Role</label>
+                        <select
+                          value={formData.staffSubRole}
+                          onChange={e => setFormData(f => ({ ...f, staffSubRole: e.target.value }))}
+                          className="w-full bg-gray-50 dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#16321F] dark:focus:ring-[#D9E96B]"
+                        >
+                          <option value="inventory">Inventory Staff</option>
+                          <option value="prep_cook">Prep Cook</option>
+                          <option value="waste">Waste Management</option>
+                        </select>
+                      </div>
+                    )}
                     <div>
                       <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">Temporary Password</label>
                       <input

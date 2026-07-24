@@ -1,169 +1,132 @@
+import React, { useState } from 'react';
+import { LogOut, Flame } from 'lucide-react';
 import { Pressable } from './Pressable';
-import React from 'react';
-import { User, LogOut, Flame, Sparkles, Award, ShieldAlert } from 'lucide-react';
 
 interface StudentProfileProps {
- onSignOut: () => void;
- optInCount: number;
- email?: string;
+  onSignOut: () => void;
+  email?: string;
 }
 
-export default function StudentProfile({ onSignOut, optInCount, email = 'student@kitchenops.edu' }: StudentProfileProps) {
- const initials = email.split('@')[0].slice(0, 2).toUpperCase() || 'UP';
- const displayName = email.split('@')[0] || 'University Patron';
+type MealType = 'breakfast' | 'lunch' | 'dinner';
 
- return (
- <div id="student_profile" className="flex-1 max-w-[600px] mx-auto w-full mt-12 md:mt-16 px-4 pb-24">
- <div className="mb-6 mt-4">
- <h2 className="text-3xl font-extrabold text-[#0A170E] mb-1 ">Your Profile</h2>
- </div>
+const MEAL_DATA: Record<MealType, { streak: number; days: number[] }> = {
+  breakfast: { streak: 4, days: [1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0] },
+  lunch:     { streak: 12, days: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1] },
+  dinner:    { streak: 9, days: [1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0] }
+};
 
- {/* User Details Card */}
- <div className="bg-white rounded-[20px] shadow-sm border border-gray-100 p-6 mb-6">
- <div className="flex items-center gap-4">
- <div className="w-14 h-14 rounded-full bg-emerald-50 text-[#16321F] flex items-center justify-center font-bold text-xl border border-emerald-100">
- {initials}
- </div>
- <div>
- <h3 className="text-lg font-bold text-[#0A170E] capitalize">{displayName}</h3>
- <p className="text-xs text-gray-400 font-semibold mt-0.5">{email}</p>
- <p className="text-sm text-gray-500 mt-1 font-medium">Banyan Hall • Room 304</p>
- </div>
- </div>
- </div>
+export default function StudentProfile({ onSignOut, email = 'student@kitchenops.edu' }: StudentProfileProps) {
+  const initials = email.split('@')[0].slice(0, 2).toUpperCase() || 'ST';
+  const displayName = email.split('@')[0] || 'Student';
 
- {/* Stats Bento Cards */}
- <div className="grid grid-cols-2 gap-4 mb-6">
- {/* Streak */}
- <div className="bg-gradient-to-br from-amber-50 to-amber-100/50 rounded-[20px] p-4 border border-amber-200/50 flex flex-col justify-between h-32">
- <div className="flex items-center justify-between">
- <span className="text-xs font-bold text-amber-800 ">Attendance Streak</span>
- <Flame className="w-5 h-5 text-amber-600 fill-amber-500" />
- </div>
- <div>
- <div className="text-2xl font-bold text-amber-900">12 Days</div>
- </div>
- </div>
+  const [selectedMeal, setSelectedMeal] = useState<MealType>('dinner');
+  const [selectedDayTooltip, setSelectedDayTooltip] = useState<string>('Tap a day to see details');
 
- {/* Total Booked */}
- <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 rounded-[20px] p-4 border border-emerald-200/50 flex flex-col justify-between h-32">
- <div className="flex items-center justify-between">
- <span className="text-xs font-bold text-emerald-800 ">Total RSVPs</span>
- <Sparkles className="w-5 h-5 text-emerald-600 fill-emerald-100" />
- </div>
- <div>
- <div className="text-2xl font-bold text-[#16321F]">{36 + optInCount} Meals</div>
- </div>
- </div>
+  const currentData = MEAL_DATA[selectedMeal];
+  const mealTitle = selectedMeal.charAt(0).toUpperCase() + selectedMeal.slice(1);
 
- {/* Average Waste */}
- <div className="bg-gradient-to-br from-teal-50 to-teal-100/50 rounded-[20px] p-4 border border-teal-200/50 flex flex-col justify-between h-32 col-span-2">
- <div className="flex items-center justify-between">
- <span className="text-xs font-bold text-teal-800 ">Average Plate Waste</span>
- <Award className="w-5 h-5 text-teal-600" />
- </div>
- <div className="flex items-end justify-between">
- <div>
- <div className="text-3xl font-bold text-teal-900">4.8%</div>
- </div>
- <span className="bg-teal-600 text-white text-xs font-bold px-2 py-1 rounded-xl ">A+ Grade</span>
- </div>
- </div>
- </div>
+  const handleDayClick = (dayNum: number, attended: boolean) => {
+    setSelectedDayTooltip(`Day ${dayNum}: ${attended ? 'attended' : 'not attended'}`);
+  };
 
- {/* Weekly Calendar Heatmap Streak */}
- <div className="bg-white rounded-[20px] border border-gray-100 p-5 shadow-sm mb-6 space-y-4">
- <div className="flex justify-between items-center">
- <div>
- <h3 className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
- <Sparkles className="w-4 h-4 text-amber-500 fill-amber-100" />
- RSVP Habit Heatmap
- </h3>
- </div>
- <span className="bg-emerald-50 text-[#16321F] text-xs font-medium px-2 py-0.5 rounded border border-emerald-100">
- 12 Day Streak
- </span>
- </div>
+  return (
+    <div id="student_profile" className="flex-1 max-w-[480px] mx-auto w-full font-sans pb-24">
+      {/* Compact Sticky Identity Header Bar (avatar, name, room info) */}
+      <div className="sticky top-0 z-30 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md px-4 py-2.5 border-b border-gray-100 dark:border-gray-800 shadow-2xs">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-[#185fa5] dark:text-emerald-400 font-bold text-xs flex items-center justify-center shrink-0 border border-emerald-200/50 dark:border-emerald-800/40">
+            {initials}
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white capitalize leading-tight truncate">{displayName}</h3>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium truncate">Banyan Hall • Room 304</p>
+          </div>
+        </div>
 
- {/* Heatmap Grid */}
- <div className="flex flex-col items-center">
- <div className="grid grid-cols-7 gap-2">
- {/* Weekdays Labels */}
- {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, idx) => (
- <span key={idx} className="text-xs font-medium text-gray-400 text-center w-8 ">
- {day}
- </span>
- ))}
+        {/* Meal Type Toggle directly inside sticky container */}
+        <div className="flex gap-1.5 mt-2 bg-gray-100 dark:bg-gray-800/80 p-1 rounded-xl">
+          {(['breakfast', 'lunch', 'dinner'] as MealType[]).map((meal) => {
+            const isSelected = selectedMeal === meal;
+            return (
+              <button
+                key={meal}
+                type="button"
+                onClick={() => {
+                  setSelectedMeal(meal);
+                  setSelectedDayTooltip('Tap a day to see details');
+                }}
+                className={`flex-1 text-xs font-semibold py-1.5 px-3 rounded-lg transition-all capitalize cursor-pointer ${
+                  isSelected
+                    ? 'bg-[#16321F] dark:bg-[#D9E96B] text-white dark:text-[#16321F] shadow-xs'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                }`}
+              >
+                {meal}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
- {/* 4 Weeks of daily blocks (28 total) */}
- {Array.from({ length: 28 }).map((_, idx) => {
- // Create a realistic habit map
- // 0-14: completed (dark green)
- // 15-20: weekend or missed (light grey or soft green)
- // 21-25: completed (dark green)
- // 26-27: dynamic depending on optInCount
- let bgClass = "bg-gray-100 text-gray-400";
- let title = "No meal service / No RSVP";
+      <div className="px-4 pt-4">
+        {/* Meal Streak Card (scrolls normally) */}
+        <div className="bg-white dark:bg-gray-800/80 rounded-[16px] border border-gray-100 dark:border-gray-700/60 p-4 mb-4 shadow-xs">
+          <div className="flex justify-between items-center mb-1">
+            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">{mealTitle} streak</p>
+            <Flame className="w-5 h-5 text-amber-600 fill-amber-500" />
+          </div>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">{currentData.streak} days</p>
+          <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">Based on confirmed attendance, updates automatically</p>
+        </div>
 
- if (idx < 13) {
- bgClass = "bg-[#16321F] text-white";
- title = "Opted in & Attended";
- } else if (idx === 13 || idx === 14) {
- bgClass = "bg-gray-100 text-gray-400";
- title = "Missed RSVP cutoff";
- } else if (idx >= 15 && idx <= 23) {
- bgClass = "bg-[#4a7c59] text-white";
- title = "Opted in & Attended";
- } else if (idx === 24 || idx === 25) {
- bgClass = "bg-emerald-100 text-emerald-800 border border-emerald-200/50";
- title = "Excused / Weekend meal exemption";
- } else if (idx === 26) {
- bgClass = optInCount > 0 ? "bg-[#16321F] text-white animate-pulse" : "bg-amber-100 text-amber-800 border border-amber-200";
- title = optInCount > 0 ? "Opted In Today" : "Not yet opted in today";
- } else if (idx === 27) {
- bgClass = optInCount > 1 ? "bg-[#16321F] text-white animate-pulse" : "bg-gray-50 border border-gray-100 text-gray-300";
- title = optInCount > 1 ? "Opted In Tomorrow" : "Pending tomorrow's choice";
- }
+        {/* Monthly Attendance Heatmap (scrolls normally) */}
+        <div className="bg-white dark:bg-gray-800/80 rounded-[16px] border border-gray-100 dark:border-gray-700/60 p-4 mb-6 shadow-xs">
+          <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-3">{mealTitle} attendance this month</p>
+          
+          {/* Days of week headers */}
+          <div className="grid grid-cols-7 gap-2 mb-2 text-center text-[10px] font-bold text-gray-400 dark:text-gray-500">
+            {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, idx) => (
+              <div key={idx}>{day}</div>
+            ))}
+          </div>
 
- return (
- <div
- key={idx}
- title={title}
- className={`w-8 h-8 rounded-[20px] flex items-center justify-center text-xs font-bold select-none transition-all duration-300 hover:scale-110 ${bgClass}`}
- >
- {idx + 1}
- </div>
- );
- })}
- </div>
+          {/* Heatmap Grid */}
+          <div className="grid grid-cols-7 gap-2">
+            {currentData.days.map((attended, idx) => {
+              const dayNum = idx + 1;
+              return (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => handleDayClick(dayNum, !!attended)}
+                  className={`aspect-square rounded-md transition-all cursor-pointer flex items-center justify-center text-[10px] font-bold ${
+                    attended
+                      ? 'bg-[#16321F] dark:bg-[#D9E96B] text-white dark:text-[#16321F] hover:opacity-90'
+                      : 'bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-400 dark:text-gray-500 hover:bg-gray-200'
+                  }`}
+                  title={`Day ${dayNum}: ${attended ? 'attended' : 'not attended'}`}
+                >
+                  {dayNum}
+                </button>
+              );
+            })}
+          </div>
 
- <div className="flex gap-4 mt-4 text-xs font-medium text-gray-400 ">
- <div className="flex items-center gap-1">
- <span className="w-2.5 h-2.5 rounded bg-[#16321F]"></span>
- <span>Opted In</span>
- </div>
- <div className="flex items-center gap-1">
- <span className="w-2.5 h-2.5 rounded bg-emerald-100 border border-emerald-200"></span>
- <span>Exempt</span>
- </div>
- <div className="flex items-center gap-1">
- <span className="w-2.5 h-2.5 rounded bg-gray-100"></span>
- <span>Missed</span>
- </div>
- </div>
- </div>
- </div>
+          {/* Tooltip / Hint */}
+          <p className="text-center text-xs text-gray-500 dark:text-gray-400 mt-3 min-h-[18px]">
+            {selectedDayTooltip}
+          </p>
+        </div>
 
- {/* Settings Options & Sign Out */}
- <div className="space-y-3">
- <Pressable
- onClick={onSignOut}
- className="w-full h-11 bg-red-50 hover:bg-red-100 text-red-600 font-bold rounded-[20px] transition-all flex items-center justify-center gap-2 active:scale-[0.98] border border-red-100 shadow-sm"
- >
- <LogOut className="w-5 h-5" />
- Sign Out / Change User Role
- </Pressable>
- </div>
- </div>
- );
+        {/* Sign Out Action */}
+        <Pressable
+          onClick={onSignOut}
+          className="w-full h-11 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 font-bold rounded-[16px] transition-all flex items-center justify-center gap-2 border border-red-100 dark:border-red-900/40 shadow-xs"
+        >
+          <LogOut className="w-4 h-4" />
+          Sign Out / Change User Role
+        </Pressable>
+      </div>
+    </div>
+  );
 }

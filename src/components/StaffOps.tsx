@@ -1322,7 +1322,7 @@ const demandVal = portionCount * qtyPerServing;
  
  {/* Dynamic Waste Entry Form */}
  {!isWasteExpanded ? (
- <Pressable as="section" className="lg:col-span-12 w-full text-left bg-white dark:bg-[#121212] hover:bg-emerald-50/10 rounded-[24px] p-5 border border-gray-100 dark:border-gray-800 shadow-xs cursor-pointer flex items-center justify-between transition-all hover:border-[#16321F]/40 group" onClick={() => { triggerHaptic('medium'); setIsWasteExpanded(true); }}>
+ <Pressable as="div" className="lg:col-span-12 w-full text-left bg-white dark:bg-[#121212] hover:bg-emerald-50/10 rounded-[24px] p-5 border border-gray-100 dark:border-gray-800 shadow-xs cursor-pointer flex items-center justify-between transition-all hover:border-[#16321F]/40 group" onClick={() => { triggerHaptic('medium'); setIsWasteExpanded(true); }}>
  <div className="flex items-center gap-3.5">
  <div className="w-10 h-10 rounded-[20px] bg-emerald-100/40 border border-emerald-100/60 flex items-center justify-center shrink-0">
  <Trash2 className="w-5 h-5 text-[#16321F] dark:text-[#D9E96B]" />

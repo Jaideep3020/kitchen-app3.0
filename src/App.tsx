@@ -5,13 +5,13 @@ import { useData } from './contexts/DataContext';
 import { useToast } from './contexts/ToastContext';
 import { motion, AnimatePresence, MotionConfig, useReducedMotion } from "motion/react";
 import { 
- Menu, RotateCw, Moon, Sun, Bell, Search,
+ Menu, RotateCw, Moon, Sun, Bell, Search, X,
   Clock, Calendar, Flame, CheckCircle2, 
  Plus, Users, ChefHat, Trash2, Truck, Utensils, 
  BarChart2, Package, User, LogOut, ArrowRight, ClipboardList, Rocket, TrendingDown, Camera, Shield, Lock, Unlock
 } from 'lucide-react';
 import { 
- Role, StudentTab, StaffTab, MenuItem, InventoryItem, 
+ Role, StaffSubRole, StudentTab, StaffTab, MenuItem, InventoryItem, 
  Supplier, ActiveOrder, ActivityLog, EfficiencyRecord,
  PlateWasteThreshold, ThresholdAlert
 } from './types';
@@ -24,7 +24,6 @@ import {
 import SignIn from './components/SignIn';
 import NotificationInbox from './components/NotificationInbox';
 import StudentOptIn from './components/StudentOptIn';
-import StudentCheckIn from './components/StudentCheckIn';
 import StudentProfile from './components/StudentProfile';
 import StaffDashboard from './components/StaffDashboard';
 import StaffOps from './components/StaffOps';
@@ -33,6 +32,8 @@ import StaffReports from './components/StaffReports';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import StaffManagement from "./components/StaffManagement";
 import StaffLaunchHub from './components/StaffLaunchHub';
+import { InventoryStaffPortal } from './components/InventoryStaffPortal';
+import { PrepCookPortal } from './components/PrepCookPortal';
 import ManagerMenu from './components/ManagerMenu';
 import TimeAndCalendarHub from './components/TimeAndCalendarHub';
 import { triggerHaptic } from './lib/haptics';
@@ -45,6 +46,7 @@ export default function App() {
   const shouldReduceMotion = useReducedMotion();
   const { addToast } = useToast();
  const [role, setRole] = useState<Role>(null);
+ const [staffSubRole, setStaffSubRole] = useState<StaffSubRole>(null);
  const queryClient = useQueryClient();
  const isOnline = useOnlineStatus();
 
@@ -60,9 +62,11 @@ export default function App() {
 
  
 
- const [studentTab, setStudentTab] = useState<StudentTab>(() =>
-   (new URLSearchParams(window.location.search).get('studentTab') as StudentTab) || 'menu'
- );
+ const [studentTab, setStudentTab] = useState<StudentTab>(() => {
+   const param = new URLSearchParams(window.location.search).get('studentTab');
+   if (param === 'profile') return 'profile';
+   return 'today';
+ });
  const [staffTab, setStaffTab] = useState<StaffTab>(() =>
    (new URLSearchParams(window.location.search).get('staffTab') as StaffTab) || 'dashboard'
  );
@@ -81,6 +85,7 @@ export default function App() {
 
  // Core synchronized states
   const { 
+    users,
     menuItems, setMenuItems, 
     prepItems: contextPrepItems, setPrepItems, 
     suppliers, setSuppliers, 
@@ -112,8 +117,10 @@ export default function App() {
  const [riceOrdered, setRiceOrdered] = useState(false);
 
  // Time & Calendar Hub synchronized states
- const [selectedDay, setSelectedDay] = useState<string>('Thursday');
- const [selectedDate, setSelectedDate] = useState<Date>(new Date(2026, 6, 9)); // Default to Thursday July 9, 2026
+ const [selectedDay, setSelectedDay] = useState<string>(() => 
+   new Date().toLocaleDateString('en-US', { weekday: 'long' })
+ );
+ const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
   
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -125,6 +132,22 @@ export default function App() {
   const [targetStockTab, setTargetStockTab] = useState<'suppliers' | 'orders'>('suppliers');
   const [initialDraftPO, setInitialDraftPO] = useState<{ item: string; supplierId: string } | null>(null);
 
+
+  // Keyboard shortcut for Cmd+K / Ctrl+K global search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        const searchInput = document.getElementById('global-search-input');
+        if (searchInput) {
+          searchInput.focus();
+          setIsSearchFocused(true);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const searchResults = React.useMemo(() => {
     if (!globalSearchQuery.trim()) return [];
@@ -140,7 +163,30 @@ export default function App() {
           type: 'inventory',
           title: item.name,
           subtitle: `Inventory • ${item.currentStock || (item as any).current} ${item.unit} in stock`,
-          action: () => { setStaffTab('stock'); setGlobalSearchQuery(''); }
+          action: () => { 
+            setStaffTab('ops'); 
+            setTargetOpsSearch(item.name);
+            setGlobalSearchQuery(''); 
+            setIsSearchFocused(false);
+          }
+        });
+      }
+    });
+
+    // Search Menu Items
+    menuItems.forEach(menuItem => {
+      if (menuItem.name.toLowerCase().includes(query) || (menuItem.category && menuItem.category.toLowerCase().includes(query))) {
+        results.push({
+          id: menuItem.id,
+          type: 'menu',
+          title: menuItem.name,
+          subtitle: `Menu Item • ${menuItem.category} • ${menuItem.mealType}`,
+          action: () => { 
+            setStaffTab('ops'); 
+            setTargetOpsSearch(menuItem.name);
+            setGlobalSearchQuery(''); 
+            setIsSearchFocused(false);
+          }
         });
       }
     });
@@ -153,7 +199,13 @@ export default function App() {
           type: 'supplier',
           title: supplier.name,
           subtitle: `Supplier • ${supplier.category}`,
-          action: () => { setStaffTab('stock'); setTargetStockTab('suppliers'); setTargetStockSearch(supplier.name); setGlobalSearchQuery(''); }
+          action: () => { 
+            setStaffTab('stock'); 
+            setTargetStockTab('suppliers'); 
+            setTargetStockSearch(supplier.name); 
+            setGlobalSearchQuery(''); 
+            setIsSearchFocused(false);
+          }
         });
       }
     });
@@ -166,7 +218,13 @@ export default function App() {
           type: 'order',
           title: order.id,
           subtitle: `Order • ${order.supplierName} • ${order.status}`,
-          action: () => { setStaffTab('dashboard'); setGlobalSearchQuery(''); }
+          action: () => { 
+            setStaffTab('stock'); 
+            setTargetStockTab('orders'); 
+            setTargetStockSearch(order.supplierName || order.id); 
+            setGlobalSearchQuery(''); 
+            setIsSearchFocused(false);
+          }
         });
       }
     });
@@ -179,13 +237,17 @@ export default function App() {
           type: 'invoice',
           title: `Invoice ${order.invoiceNo}`,
           subtitle: `Past Order • ${order.supplierName} • ₹${order.amount}`,
-          action: () => { setStaffTab('dashboard'); setGlobalSearchQuery(''); }
+          action: () => { 
+            setStaffTab('dashboard'); 
+            setGlobalSearchQuery(''); 
+            setIsSearchFocused(false);
+          }
         });
       }
     });
 
-    return results.slice(0, 5);
-  }, [globalSearchQuery, prepItems, suppliers, activeOrders, pastOrders]);
+    return results.slice(0, 6);
+  }, [globalSearchQuery, prepItems, menuItems, suppliers, activeOrders, pastOrders]);
 
   useEffect(() => {
 
@@ -394,26 +456,79 @@ export default function App() {
  handleTriggerReorder('sup_1');
  };
 
- // Switch modes
- const handleSignIn = (selectedRole: 'student' | 'staff' | 'manager', email: string) => {
- setRole(selectedRole);
- if (email) {
-   setCurrentUserEmail(email);
- }
- };
+  // Switch modes
+  const handleSignIn = (selectedRole: 'student' | 'staff' | 'manager', email: string, subRole?: string | null) => {
+    setRole(selectedRole);
+    if (email) {
+      setCurrentUserEmail(email);
+    }
+    if (subRole) {
+      setStaffSubRole(subRole as StaffSubRole);
+    } else {
+      const matched = users.find(u => u.email === email);
+      setStaffSubRole(matched?.staffSubRole || null);
+    }
+  };
 
- const handleSignOut = () => {
- setRole(null);
- };
+  const handleSignOut = () => {
+    setRole(null);
+    setStaffSubRole(null);
+  };
 
- // If logged out, render the login view
- if (!role) {
- return (
- <div className="bg-gradient-to-b from-[#EAF5E4] to-white text-gray-900 min-h-screen flex flex-col font-sans selection:bg-[#16321F]/10 dark:selection:bg-[#D9E96B]/20 selection:text-[#16321F] dark:selection:text-[#D9E96B]">
- <SignIn onSignIn={handleSignIn} />
- </div>
- );
- }
+  // If logged out, render the login view
+  if (!role) {
+    return (
+      <div className="bg-gradient-to-b from-[#EAF5E4] to-white text-gray-900 min-h-screen flex flex-col font-sans selection:bg-[#16321F]/10 dark:selection:bg-[#D9E96B]/20 selection:text-[#16321F] dark:selection:text-[#D9E96B]">
+        <SignIn onSignIn={handleSignIn} />
+      </div>
+    );
+  }
+
+  // If role is staff with inventory subrole, render dedicated InventoryStaffPortal
+  if (role === 'staff' && staffSubRole === 'inventory') {
+    const activeUser = users.find(u => u.email === currentUserEmail) || {
+      id: 'usr_inv',
+      uid: 'usr_inv',
+      name: 'Inventory Staff',
+      email: currentUserEmail || 'inventory.staff@kitchenops.edu',
+      role: 'staff',
+      staffSubRole: 'inventory',
+      orgId: 'org_001'
+    };
+
+    return (
+      <InventoryStaffPortal
+        currentUser={activeUser}
+        onLogout={handleSignOut}
+        darkMode={isDarkMode}
+        onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
+        addToast={addToast}
+      />
+    );
+  }
+
+  // If role is staff with prep_cook subrole, render dedicated PrepCookPortal
+  if (role === 'staff' && staffSubRole === 'prep_cook') {
+    const activeUser = users.find(u => u.email === currentUserEmail) || {
+      id: 'usr_pc',
+      uid: 'usr_pc',
+      name: 'Prep & Cook Staff',
+      email: currentUserEmail || 'rohan.das.stf@gmail.com',
+      role: 'staff',
+      staffSubRole: 'prep_cook',
+      orgId: 'org_001'
+    };
+
+    return (
+      <PrepCookPortal
+        currentUser={activeUser}
+        onLogout={handleSignOut}
+        darkMode={isDarkMode}
+        onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
+        addToast={addToast}
+      />
+    );
+  }
 
  return (
  <>
@@ -450,14 +565,11 @@ export default function App() {
         <nav className="flex-1 px-4 py-6 flex flex-col gap-2 overflow-y-auto">
           {role === 'student' ? (
             <>
-              <Pressable onClick={() => { setStudentTab('menu'); }} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${studentTab === 'menu' ? 'bg-[#16321F] text-[#D9E96B] dark:bg-[#D9E96B] dark:text-[#16321F] font-bold shadow-md' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
-                <Utensils className="w-5 h-5" /> Weekly Menu
-              </Pressable>
-              <Pressable onClick={() => { setStudentTab('checkin'); }} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${studentTab === 'checkin' ? 'bg-[#16321F] text-[#D9E96B] dark:bg-[#D9E96B] dark:text-[#16321F] font-bold shadow-md' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
-                <Camera className="w-5 h-5" /> Scan & Check-in
+              <Pressable onClick={() => { setStudentTab('today'); }} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${studentTab === 'today' || (studentTab as string) === 'menu' ? 'bg-[#16321F] text-[#D9E96B] dark:bg-[#D9E96B] dark:text-[#16321F] font-bold shadow-md' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+                <Utensils className="w-5 h-5" /> Today
               </Pressable>
               <Pressable onClick={() => { setStudentTab('profile'); }} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${studentTab === 'profile' ? 'bg-[#16321F] text-[#D9E96B] dark:bg-[#D9E96B] dark:text-[#16321F] font-bold shadow-md' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
-                <Users className="w-5 h-5" /> Profile
+                <User className="w-5 h-5" /> Profile
               </Pressable>
             </>
           ) : (
@@ -543,28 +655,41 @@ export default function App() {
  {/* Global Search Bar */}
  {role === 'staff' && (
    <div className="pointer-events-auto flex w-full md:w-auto md:flex-1 md:max-w-lg order-3 md:order-2 mt-3 md:mt-0 relative z-50 mx-0 md:mx-2">
-     <Search className="w-[18px] h-[18px] absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400" />
+     <Search className="w-[18px] h-[18px] absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 pointer-events-none" />
      <input
+       id="global-search-input"
        type="text"
        value={globalSearchQuery}
        onChange={(e) => setGlobalSearchQuery(e.target.value)}
-       placeholder="Search inventory, suppliers, or past orders..."
-       className="w-full h-10 md:h-11 bg-white/95 dark:bg-[#121212]/95 backdrop-blur-md rounded-full border border-gray-200 dark:border-gray-800 pl-10 pr-4 text-sm focus:outline-none focus:border-[#16321F] dark:focus:border-[#D9E96B] focus:ring-1 focus:ring-[#16321F] dark:focus:ring-[#D9E96B] shadow-sm transition-all text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+       onFocus={() => setIsSearchFocused(true)}
+       onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
+       placeholder="Search inventory, dishes, suppliers, or orders..."
+       className="w-full h-10 md:h-11 bg-white/95 dark:bg-[#121212]/95 backdrop-blur-md rounded-full border border-gray-200 dark:border-gray-800 pl-10 pr-12 text-sm focus:outline-none focus:border-[#16321F] dark:focus:border-[#D9E96B] focus:ring-1 focus:ring-[#16321F] dark:focus:ring-[#D9E96B] shadow-sm transition-all text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
      />
-     <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none">
-        <kbd className="hidden xl:inline-flex h-6 items-center gap-1 rounded bg-gray-100 dark:bg-[#222] px-2 font-mono text-[10px] font-medium text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
-          <span className="text-xs">⌘</span>K
-        </kbd>
+     <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+       {globalSearchQuery ? (
+         <Pressable
+           onClick={() => { setGlobalSearchQuery(''); setIsSearchFocused(false); }}
+           className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors cursor-pointer"
+           title="Clear search"
+         >
+           <X className="w-3.5 h-3.5" />
+         </Pressable>
+       ) : (
+         <kbd className="hidden xl:inline-flex h-6 items-center gap-1 rounded bg-gray-100 dark:bg-[#222] px-2 font-mono text-[10px] font-medium text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 pointer-events-none">
+           <span className="text-xs">⌘</span>K
+         </kbd>
+       )}
      </div>
      
      {/* Search Dropdown Mockup */}
      <AnimatePresence>
-       {isSearchFocused && globalSearchQuery.length > 0 && (
+       {isSearchFocused && globalSearchQuery.trim().length > 0 && (
          <motion.div
            initial={{ opacity: 0, y: -10 }}
            animate={{ opacity: 1, y: 0 }}
            exit={{ opacity: 0, y: -10 }}
-           className="absolute top-14 left-0 right-0 bg-white dark:bg-[#121212] border border-gray-100 dark:border-gray-800 rounded-2xl shadow-xl overflow-hidden"
+           className="absolute top-14 left-0 right-0 bg-white dark:bg-[#121212] border border-gray-100 dark:border-gray-800 rounded-2xl shadow-xl overflow-hidden z-50"
          >
            <div className="p-2 border-b border-gray-50 dark:border-gray-800/50">
              <div className="px-3 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider">Top Results</div>
@@ -573,33 +698,45 @@ export default function App() {
                  <div 
                    key={`${result.type}-${result.id}`}
                    className="flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-[#1a1a1a] rounded-xl cursor-pointer transition-colors"
-                   onClick={result.action}
+                   onMouseDown={(e) => {
+                     e.preventDefault();
+                     result.action();
+                   }}
                  >
                    <div className={`p-2 rounded-lg ${
                      result.type === 'inventory' ? 'bg-[#16321F]/10 dark:bg-[#D9E96B]/20 text-[#16321F] dark:text-[#D9E96B]' :
+                     result.type === 'menu' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' :
                      result.type === 'supplier' ? 'bg-blue-500/10 text-blue-500' :
                      'bg-purple-500/10 text-purple-500'
                    }`}>
-                     {result.type === 'inventory' ? <Package className="w-4 h-4" /> : result.type === 'supplier' ? <Truck className="w-4 h-4" /> : <ClipboardList className="w-4 h-4" />}
+                     {result.type === 'inventory' ? <Package className="w-4 h-4" /> :
+                      result.type === 'menu' ? <Utensils className="w-4 h-4" /> :
+                      result.type === 'supplier' ? <Truck className="w-4 h-4" /> :
+                      <ClipboardList className="w-4 h-4" />}
                    </div>
-                   <div>
-                     <div className="text-sm font-bold text-gray-900 dark:text-white">{result.title}</div>
-                     <div className="text-xs text-gray-500">{result.subtitle}</div>
+                   <div className="flex-1 min-w-0">
+                     <div className="text-sm font-bold text-gray-900 dark:text-white truncate">{result.title}</div>
+                     <div className="text-xs text-gray-500 truncate">{result.subtitle}</div>
                    </div>
                  </div>
                ))
              ) : (
-               <div className="px-3 py-4 text-center text-sm text-gray-500">We couldn\'t find anything matching "{globalSearchQuery}". Try adjusting your search.</div>
+               <div className="px-3 py-4 text-center text-sm text-gray-500">We couldn't find anything matching "{globalSearchQuery}". Try adjusting your search.</div>
              )}
            </div>
            <div className="p-2">
              <div className="px-3 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider">Quick Actions</div>
              <div 
                className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 dark:hover:bg-[#1a1a1a] rounded-xl cursor-pointer transition-colors text-gray-600 dark:text-gray-300"
-               onClick={() => { setStaffTab('ops'); setGlobalSearchQuery(''); }}
+               onMouseDown={(e) => {
+                 e.preventDefault();
+                 setStaffTab('ops');
+                 setGlobalSearchQuery('');
+                 setIsSearchFocused(false);
+               }}
              >
                <Plus className="w-4 h-4" />
-               <span className="text-sm font-medium">Create new order</span>
+               <span className="text-sm font-medium">Create new order / Log inventory</span>
              </div>
            </div>
          </motion.div>
@@ -658,45 +795,39 @@ export default function App() {
  </header>
 
  {/* Main Content Area */}
- <main className="flex-1 min-h-0 overflow-y-auto pt-32 md:pt-20 pb-24 md:pb-8 px-3 md:px-6 scroll-smooth overscroll-y-contain w-full">
-{/* Time & Calendar Hub */}
- <div className="shrink-0 relative z-30 mb-3 md:mb-4">
-   <TimeAndCalendarHub 
-     menuItems={menuItems}
-     selectedDay={selectedDay}
-     onDayChange={setSelectedDay}
-     selectedDate={selectedDate}
-     onDateChange={setSelectedDate}
-     title={role === 'staff' ? (
-       
-       staffTab === 'dashboard' ? 'Operations Center' :
-       staffTab === 'ops' ? 'Kitchen Ops & Trackers' :
-       staffTab === 'stock' ? 'Supplier Reorders' :
-       staffTab === 'reports' ? 'Audits & Analytics' :
-       'Launch Hub'
-     ) : undefined}
-     actions={undefined}
-   />
- </div>
- {role === 'student' && studentTab === 'menu' && (
- <div className="w-full bg-[#D9E96B] text-[#16321F] dark:text-[#D9E96B] px-4 py-2.5 flex items-center justify-center gap-1.5 shadow-sm border-b border-amber-600/10 shrink-0 relative z-20">
- <Clock className="w-4 h-4 fill-[#16321F] text-[#D9E96B]" />
- <span className="text-xs font-bold ">RSVP closes in 45 mins</span>
- </div>
+  <main className={`flex-1 min-h-0 overflow-y-auto ${role === 'student' ? 'pt-16 md:pt-16 pb-20 md:pb-8 px-3 md:px-6' : 'pt-32 md:pt-20 pb-20 md:pb-8 px-3 md:px-6'} scroll-smooth overscroll-y-contain w-full`}>
+ {/* Time & Calendar Hub */}
+  {role === 'staff' && (
+  <div className="shrink-0 relative z-30 mb-3 md:mb-4">
+    <TimeAndCalendarHub 
+      menuItems={menuItems}
+      selectedDay={selectedDay}
+      onDayChange={setSelectedDay}
+      selectedDate={selectedDate}
+      onDateChange={setSelectedDate}
+      title={
+        staffTab === 'dashboard' ? 'Operations Center' :
+        staffTab === 'ops' ? 'Kitchen Ops & Trackers' :
+        staffTab === 'stock' ? 'Supplier Reorders' :
+        staffTab === 'reports' ? 'Audits & Analytics' :
+        'Launch Hub'
+      }
+      actions={undefined}
+    />
+  </div>
   )}
 
- 
- {role === 'student' ? (
- <AnimatePresence mode="wait">
- <motion.div 
- key={studentTab}
- initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 10, filter: 'blur(4px)' }}
- animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, y: 0, filter: 'blur(0px)' }}
- exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -10, filter: 'blur(4px)' }}
- transition={{ duration: shouldReduceMotion ? 0 : 0.25, ease: 'easeOut' }}
- >
+  {role === 'student' ? (
+  <AnimatePresence mode="wait">
+  <motion.div 
+  key={studentTab}
+  initial={{ opacity: 0 }}
+  animate={{ opacity: 1 }}
+  exit={{ opacity: 0 }}
+  transition={{ duration: shouldReduceMotion ? 0 : 0.2, ease: 'easeOut' }}
+  >
  <ErrorBoundary fallbackMessage="Failed to load student view.">
- {studentTab === 'menu' && (
+ {(studentTab === 'today' || (studentTab as string) === 'menu') && (
  <StudentOptIn
  menuItems={menuItems}
  onConfirm={handleStudentConfirm}
@@ -706,16 +837,9 @@ export default function App() {
  onActiveDayChange={setSelectedDay}
  />
  )}
- {studentTab === 'checkin' && (
- <StudentCheckIn
- menuItems={menuItems}
- onLogPlateWaste={handleStudentPlateWasteLog}
- />
- )}
  {studentTab === 'profile' && (
  <StudentProfile
  onSignOut={handleSignOut}
- optInCount={optInCount}
  email={currentUserEmail}
  />
  )}
@@ -792,17 +916,11 @@ export default function App() {
  <nav className="fixed bottom-0 w-full z-40 bg-white/95 dark:bg-[#121212]/95 backdrop-blur-md border-t border-gray-100 dark:border-gray-800 shadow-sm flex justify-around items-center h-[calc(4rem+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)] md:hidden">
         {role === 'student' ? (
           <>
-            <Pressable onClick={() => { setStudentTab('menu'); }} className={`flex flex-col items-center justify-center flex-1 h-full py-1 transition-all active:scale-90`}>
-              <div className={`p-1.5 rounded-full transition-all ${studentTab === 'menu' ? 'bg-[#16321F]/10 dark:bg-[#D9E96B]/10 text-[#16321F] dark:text-[#D9E96B]' : 'text-gray-400 dark:text-gray-600'}`}>
+            <Pressable onClick={() => { setStudentTab('today'); }} className={`flex flex-col items-center justify-center flex-1 h-full py-1 transition-all active:scale-90`}>
+              <div className={`p-1.5 rounded-full transition-all ${studentTab === 'today' || (studentTab as string) === 'menu' ? 'bg-[#16321F]/10 dark:bg-[#D9E96B]/10 text-[#16321F] dark:text-[#D9E96B]' : 'text-gray-400 dark:text-gray-600'}`}>
                 <Utensils className="w-5 h-5" />
               </div>
-              <span className={`text-xs mt-0.5 ${studentTab === 'menu' ? 'font-bold text-[#16321F] dark:text-[#D9E96B]' : 'font-medium text-gray-500'}`}>Menu</span>
-            </Pressable>
-            <Pressable onClick={() => { setStudentTab('checkin'); }} className={`flex flex-col items-center justify-center flex-1 h-full py-1 transition-all active:scale-90`}>
-              <div className={`p-1.5 rounded-full transition-all ${studentTab === 'checkin' ? 'bg-[#16321F]/10 dark:bg-[#D9E96B]/10 text-[#16321F] dark:text-[#D9E96B]' : 'text-gray-400 dark:text-gray-600'}`}>
-                <ClipboardList className="w-5 h-5" />
-              </div>
-              <span className={`text-xs mt-0.5 ${studentTab === 'checkin' ? 'font-bold text-[#16321F] dark:text-[#D9E96B]' : 'font-medium text-gray-500'}`}>Check-in</span>
+              <span className={`text-xs mt-0.5 ${studentTab === 'today' || (studentTab as string) === 'menu' ? 'font-bold text-[#16321F] dark:text-[#D9E96B]' : 'font-medium text-gray-500'}`}>Today</span>
             </Pressable>
             <Pressable onClick={() => { setStudentTab('profile'); }} className={`flex flex-col items-center justify-center flex-1 h-full py-1 transition-all active:scale-90`}>
               <div className={`p-1.5 rounded-full transition-all ${studentTab === 'profile' ? 'bg-[#16321F]/10 dark:bg-[#D9E96B]/10 text-[#16321F] dark:text-[#D9E96B]' : 'text-gray-400 dark:text-gray-600'}`}>
